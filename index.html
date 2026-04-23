@@ -147,6 +147,10 @@
       <span class="brand-sub">Predict.fun · Polymarket</span>
     </div>
     <div class="iconbar" role="toolbar" aria-label="操作">
+      <button type="button" class="iconbtn" id="shareBtn" aria-label="复制分享链接" title="复制分享链接">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4"/><path d="M15.4 6.5l-6.8 4"/></svg>
+        <span id="shareLabel">分享链接</span>
+      </button>
       <button type="button" class="iconbtn" id="themeBtn" aria-label="切换主题" title="切换主题">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
         <span id="themeLabel">深色</span>
@@ -767,6 +771,63 @@ Polymarket Maker：fee/share = 0
   }
 
   const THEME_KEY = "yuce-theme";
+  const STATE_KEY = "yuce-state-v1";
+
+  function readState(){
+    const out = {};
+    ids.forEach(id => { out[id] = $(id).value; });
+    return out;
+  }
+
+  function writeState(state){
+    if(!state) return;
+    ids.forEach(id => {
+      if(state[id] !== undefined && state[id] !== null) $(id).value = state[id];
+    });
+    ["A","B"].forEach(syncVisibility);
+  }
+
+  function persistState(){
+    try{ localStorage.setItem(STATE_KEY, JSON.stringify(readState())); }catch(_){}
+  }
+
+  function loadPersistedState(){
+    const fromUrl = stateFromUrl();
+    if(fromUrl){ writeState(fromUrl); return true; }
+    try{
+      const raw = localStorage.getItem(STATE_KEY);
+      if(raw){ writeState(JSON.parse(raw)); return true; }
+    }catch(_){}
+    return false;
+  }
+
+  function stateFromUrl(){
+    const hash = location.hash.startsWith("#s=") ? location.hash.slice(3) : "";
+    const qp = new URLSearchParams(location.search).get("s");
+    const payload = hash || qp;
+    if(!payload) return null;
+    try{ return JSON.parse(decodeURIComponent(atob(payload))); }catch(_){ return null; }
+  }
+
+  function buildShareUrl(){
+    const payload = btoa(encodeURIComponent(JSON.stringify(readState())));
+    const base = location.origin + location.pathname;
+    return `${base}#s=${payload}`;
+  }
+
+  async function shareCurrent(){
+    const url = buildShareUrl();
+    const btn = $("shareBtn"), label = $("shareLabel");
+    try{
+      await navigator.clipboard.writeText(url);
+      label.textContent = "已复制";
+      btn.classList.add("ok");
+    }catch(_){
+      prompt("复制下面的链接：", url);
+    }
+    setTimeout(() => { label.textContent = "分享链接"; btn.classList.remove("ok"); }, 1500);
+  }
+
 
   function applyTheme(mode){
     document.documentElement.setAttribute("data-theme", mode);
@@ -790,18 +851,20 @@ Polymarket Maker：fee/share = 0
     initTheme();
     initCats();
 
-    ids.forEach(id => $(id).addEventListener("input", calculate));
-    ids.forEach(id => $(id).addEventListener("change", calculate));
+    const onChange = () => { calculate(); persistState(); };
+    ids.forEach(id => $(id).addEventListener("input", onChange));
+    ids.forEach(id => $(id).addEventListener("change", onChange));
 
     ["A","B"].forEach(side => {
       $("polyCat"+side).addEventListener("change", () => {
         syncPolyRate(side);
-        calculate();
+        onChange();
       });
     });
 
-    $("resetBtn").addEventListener("click", reset);
-    $("swapBtn").addEventListener("click", swapLegs);
+    $("resetBtn").addEventListener("click", () => { reset(); persistState(); });
+    $("swapBtn").addEventListener("click", () => { swapLegs(); persistState(); });
+    $("shareBtn").addEventListener("click", shareCurrent);
 
     $("copyBtn").addEventListener("click", async () => {
       try{
@@ -814,6 +877,7 @@ Polymarket Maker：fee/share = 0
     });
 
     reset();
+    if(loadPersistedState()) calculate();
   }
 
   setup();
