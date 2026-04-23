@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>预测市场双边对冲计算器｜Predict.fun / Polymarket 手续费</title>
+  <style>
+    :root{
+      --bg:#0f172a;
+      --panel:#111827;
+      --panel2:#0b1220;
+      --muted:#94a3b8;
+      --text:#e5e7eb;
+      --line:rgba(148,163,184,.22);
+      --accent:#7c3aed;
+      --good:#10b981;
+      --bad:#ef4444;
+      --warn:#f59e0b;
+      --chip:#1f2937;
+      --input:#020617;
+      --shadow:0 22px 70px rgba(0,0,0,.35);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:radial-gradient(circle at 10% 0%,rgba(124,58,237,.20),transparent 32%),radial-gradient(circle at 90% 10%,rgba(16,185,129,.12),transparent 28%),var(--bg);color:var(--text);}
+    body{min-height:100vh;padding:28px 18px 60px;}
+    .wrap{max-width:1180px;margin:0 auto;}
+    .hero{display:grid;grid-template-columns:1.15fr .85fr;gap:18px;margin-bottom:18px;align-items:stretch;}
+    .card{background:linear-gradient(180deg,rgba(17,24,39,.96),rgba(11,18,32,.96));border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);}
+    .hero-main{padding:26px;position:relative;overflow:hidden;}
+    .hero-main:after{content:"";position:absolute;right:-90px;top:-90px;width:260px;height:260px;border-radius:50%;background:rgba(124,58,237,.12);filter:blur(8px);}
+    h1{font-size:32px;line-height:1.15;margin:0 0 10px;letter-spacing:-.03em;}
+    h2{font-size:20px;margin:0 0 14px;letter-spacing:-.02em;}
+    h3{font-size:15px;margin:0 0 10px;color:#cbd5e1;}
+    p{margin:0;color:var(--muted);line-height:1.7;}
+    .tagrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;}
+    .tag{background:rgba(124,58,237,.16);color:#ddd6fe;border:1px solid rgba(124,58,237,.35);padding:7px 10px;border-radius:999px;font-size:13px;}
+    .hero-side{padding:20px;display:flex;flex-direction:column;justify-content:space-between;gap:14px;}
+    .stat{padding:14px;border:1px solid var(--line);border-radius:18px;background:rgba(2,6,23,.42);}
+    .stat .label{font-size:12px;color:var(--muted);margin-bottom:6px;}
+    .stat .value{font-size:24px;font-weight:800;letter-spacing:-.02em;}
+    .stat .sub{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5;}
+    .grid{display:grid;grid-template-columns:360px 1fr;gap:18px;align-items:start;}
+    .inputs{padding:18px;position:sticky;top:14px;}
+    .results{padding:18px;}
+    label{display:block;font-size:12px;color:#cbd5e1;margin-bottom:7px;font-weight:650;}
+    input,select{width:100%;background:var(--input);color:var(--text);border:1px solid var(--line);border-radius:13px;padding:12px 12px;font-size:14px;outline:none;transition:border .16s, box-shadow .16s;}
+    input:focus,select:focus{border-color:rgba(124,58,237,.75);box-shadow:0 0 0 3px rgba(124,58,237,.18);}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+    .row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;}
+    .full{margin-bottom:12px;}
+    .leg{border:1px solid var(--line);border-radius:18px;padding:14px;background:rgba(2,6,23,.28);margin-top:12px;}
+    .leg-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+    .pill{font-size:12px;padding:5px 8px;border-radius:999px;background:var(--chip);color:#cbd5e1;border:1px solid var(--line);}
+    .toggle{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:13px;line-height:1.5;margin:10px 0 0;}
+    .toggle input{width:auto;accent-color:var(--accent);}
+    button{border:0;border-radius:13px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;padding:12px 14px;font-weight:800;cursor:pointer;box-shadow:0 10px 26px rgba(79,70,229,.25);}
+    button.secondary{background:#1f2937;box-shadow:none;border:1px solid var(--line);}
+    .actions{display:flex;gap:10px;margin-top:12px;}
+    .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+    .metric{background:rgba(2,6,23,.42);border:1px solid var(--line);border-radius:18px;padding:14px;min-height:96px;}
+    .metric .k{font-size:12px;color:var(--muted);margin-bottom:8px;}
+    .metric .v{font-size:24px;font-weight:900;letter-spacing:-.03em;}
+    .metric .small{font-size:12px;color:var(--muted);margin-top:7px;line-height:1.45;}
+    .good{color:var(--good)!important}
+    .bad{color:var(--bad)!important}
+    .warn{color:var(--warn)!important}
+    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:18px;background:rgba(2,6,23,.22);}
+    table{width:100%;border-collapse:collapse;min-width:760px;}
+    th,td{padding:12px 12px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;vertical-align:top;}
+    th:first-child,td:first-child{text-align:left;}
+    th{font-size:12px;color:#cbd5e1;background:rgba(15,23,42,.8);position:sticky;top:0;}
+    tr:last-child td{border-bottom:0;}
+    .note{background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.30);padding:12px 14px;border-radius:16px;color:#fde68a;font-size:13px;line-height:1.65;margin:14px 0;}
+    .explain{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;}
+    .mini{padding:15px;border:1px solid var(--line);border-radius:18px;background:rgba(2,6,23,.28);}
+    .mini ul{margin:8px 0 0;padding-left:18px;color:var(--muted);line-height:1.65;font-size:13px;}
+    .formula{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;background:rgba(15,23,42,.9);border:1px solid var(--line);padding:10px;border-radius:12px;color:#ddd6fe;font-size:12px;line-height:1.65;white-space:pre-wrap;}
+    footer{margin-top:18px;padding:18px;border:1px solid var(--line);border-radius:20px;background:rgba(2,6,23,.34);color:var(--muted);font-size:12px;line-height:1.7;}
+    footer a{color:#c4b5fd;text-decoration:none;}
+    .hide{display:none;}
+    @media (max-width:980px){
+      .hero,.grid,.explain{grid-template-columns:1fr}
+      .inputs{position:static}
+      .summary{grid-template-columns:1fr 1fr}
+    }
+    @media (max-width:620px){
+      body{padding:16px 10px 50px}
+      .row,.row-3,.summary{grid-template-columns:1fr}
+      h1{font-size:25px}
+      .hero-main,.hero-side,.inputs,.results{padding:16px}
+      .actions{flex-direction:column}
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <section class="hero">
+    <div class="hero-main card">
+      <h1>双边对冲计算器<br>Predict.fun / Polymarket 手续费版</h1>
+      <p>默认用截图里的例子：Ninjas in Pyjamas 13¢，Bilibili Gaming 88¢，本金 $1,000。计算逻辑是让两边买到同样数量的 shares；因为任一结果赢了都按每 share $1 兑付，所以两边 shares 相同，赛果不管哪边赢，兑付金额相同。</p>
+      <div class="tagrow">
+        <span class="tag">支持市价 / Taker 手续费</span>
+        <span class="tag">支持限价挂单 / Maker 费用</span>
+        <span class="tag">可单独选择平台与订单类型</span>
+        <span class="tag">自动判断是否套利</span>
+      </div>
+    </div>
+    <div class="hero-side card">
+      <div class="stat">
+        <div class="label">当前示例结论</div>
+        <div class="value" id="heroConclusion">—</div>
+        <div class="sub" id="heroSub">输入价格与订单类型后自动更新。</div>
+      </div>
+      <div class="stat">
+        <div class="label">对冲公式</div>
+        <div class="sub">有效单套成本 = 价格 A + 手续费 A/份 + 价格 B + 手续费 B/份。<br>shares = 本金 ÷ 有效单套成本。</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <aside class="inputs card">
+      <h2>输入</h2>
+
+      <div class="row">
+        <div>
+          <label for="bankroll">本金，USDT/USDC</label>
+          <input id="bankroll" type="number" step="0.01" value="1000">
+        </div>
+        <div>
+          <label for="roundShares">份额处理</label>
+          <select id="roundShares">
+            <option value="none">允许小数份额</option>
+            <option value="floor">向下取整</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="leg">
+        <div class="leg-title"><h3>A 结果</h3><span class="pill">例：NIP</span></div>
+
+        <div class="row">
+          <div>
+            <label for="nameA">名称</label>
+            <input id="nameA" value="Ninjas in Pyjamas">
+          </div>
+          <div>
+            <label for="priceA">买入价，¢</label>
+            <input id="priceA" type="number" step="0.01" value="13">
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="platformA">平台</label>
+            <select id="platformA">
+              <option value="predict">Predict.fun</option>
+              <option value="poly">Polymarket</option>
+              <option value="custom">自定义手续费</option>
+            </select>
+          </div>
+          <div>
+            <label for="orderA">订单</label>
+            <select id="orderA">
+              <option value="taker">市价 / 立即成交（Taker）</option>
+              <option value="maker">限价挂单 / 等别人吃单（Maker）</option>
+              <option value="taker_limit">限价但跨价立即成交（Taker）</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row polyA">
+          <div>
+            <label for="polyCatA">Polymarket 类别</label>
+            <select id="polyCatA"></select>
+          </div>
+          <div>
+            <label for="polyRateA">费率系数</label>
+            <input id="polyRateA" type="number" step="0.001" value="0.03">
+          </div>
+        </div>
+
+        <div class="row customA hide">
+          <div>
+            <label for="customFeeA">自定义费率，% of 成交额</label>
+            <input id="customFeeA" type="number" step="0.001" value="0">
+          </div>
+          <div>
+            <label for="customFeePerShareA">或固定每份手续费，$</label>
+            <input id="customFeePerShareA" type="number" step="0.0001" value="0">
+          </div>
+        </div>
+      </div>
+
+      <div class="leg">
+        <div class="leg-title"><h3>B 结果</h3><span class="pill">例：BLG</span></div>
+
+        <div class="row">
+          <div>
+            <label for="nameB">名称</label>
+            <input id="nameB" value="Bilibili Gaming">
+          </div>
+          <div>
+            <label for="priceB">买入价，¢</label>
+            <input id="priceB" type="number" step="0.01" value="88">
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="platformB">平台</label>
+            <select id="platformB">
+              <option value="predict">Predict.fun</option>
+              <option value="poly">Polymarket</option>
+              <option value="custom">自定义手续费</option>
+            </select>
+          </div>
+          <div>
+            <label for="orderB">订单</label>
+            <select id="orderB">
+              <option value="taker">市价 / 立即成交（Taker）</option>
+              <option value="maker">限价挂单 / 等别人吃单（Maker）</option>
+              <option value="taker_limit">限价但跨价立即成交（Taker）</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row polyB">
+          <div>
+            <label for="polyCatB">Polymarket 类别</label>
+            <select id="polyCatB"></select>
+          </div>
+          <div>
+            <label for="polyRateB">费率系数</label>
+            <input id="polyRateB" type="number" step="0.001" value="0.03">
+          </div>
+        </div>
+
+        <div class="row customB hide">
+          <div>
+            <label for="customFeeB">自定义费率，% of 成交额</label>
+            <input id="customFeeB" type="number" step="0.001" value="0">
+          </div>
+          <div>
+            <label for="customFeePerShareB">或固定每份手续费，$</label>
+            <input id="customFeePerShareB" type="number" step="0.0001" value="0">
+          </div>
+        </div>
+      </div>
+
+      <div class="leg">
+        <div class="leg-title"><h3>Predict.fun 参数</h3><span class="pill">全局</span></div>
+        <div class="row">
+          <div>
+            <label for="predictBase">Taker Base Fee，%</label>
+            <input id="predictBase" type="number" step="0.01" value="2">
+          </div>
+          <div>
+            <label for="predictDiscount">手续费折扣，%</label>
+            <input id="predictDiscount" type="number" step="1" value="0">
+          </div>
+        </div>
+        <p style="font-size:12px">Predict.fun 邀请折扣常见为 10%，没有折扣填 0。</p>
+      </div>
+
+      <div class="actions">
+        <button type="button" id="resetBtn">恢复截图示例</button>
+        <button type="button" class="secondary" id="copyBtn">复制结果</button>
+      </div>
+    </aside>
+
+    <main class="results card">
+      <h2>结果</h2>
+
+      <div class="summary">
+        <div class="metric">
+          <div class="k">应买份额 / 每边</div>
+          <div class="v" id="sharesEach">—</div>
+          <div class="small">两边份额相同，才能让两种赛果兑付一致。</div>
+        </div>
+
+        <div class="metric">
+          <div class="k">任一赛果兑付</div>
+          <div class="v" id="payoutAny">—</div>
+          <div class="small">忽略提现/链上 gas/滑点，仅算交易手续费。</div>
+        </div>
+
+        <div class="metric">
+          <div class="k">锁定收益 / 亏损</div>
+          <div class="v" id="profitAny">—</div>
+          <div class="small" id="roiAny">—</div>
+        </div>
+
+        <div class="metric">
+          <div class="k">完整一套有效成本</div>
+          <div class="v" id="setCost">—</div>
+          <div class="small" id="arbStatus">—</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+          <tr>
+            <th>结果</th>
+            <th>平台 / 订单</th>
+            <th>买入价</th>
+            <th>份额</th>
+            <th>成交额</th>
+            <th>手续费</th>
+            <th>实际花费</th>
+            <th>单份手续费</th>
+          </tr>
+          </thead>
+          <tbody id="legTable"></tbody>
+        </table>
+      </div>
+
+      <div class="note" id="warningBox">—</div>
+
+      <div class="explain">
+        <div class="mini">
+          <h3>订单类型怎么理解</h3>
+          <ul>
+            <li><b>市价 / 立即成交</b>：吃掉订单簿里已有挂单，按 Taker 算手续费。</li>
+            <li><b>限价挂单 / 等别人吃单</b>：你的单子留在订单簿里，按 Maker 算；两家这里都按 0 手续费处理。</li>
+            <li><b>限价但跨价立即成交</b>：虽然名字是限价，但本质是立即吃单，按 Taker 算。</li>
+          </ul>
+        </div>
+
+        <div class="mini">
+          <h3>本页手续费公式</h3>
+          <div class="formula" id="formulaBox">—</div>
+        </div>
+      </div>
+
+      <div class="explain">
+        <div class="mini">
+          <h3>市价 vs 限价费用预览</h3>
+          <div class="table-wrap">
+            <table style="min-width:560px">
+              <thead>
+              <tr>
+                <th>结果</th>
+                <th>若按市价/Taker</th>
+                <th>若限价挂单/Maker</th>
+                <th>差额</th>
+              </tr>
+              </thead>
+              <tbody id="feeCompare"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mini">
+          <h3>使用提示</h3>
+          <ul>
+            <li>市价单可能吃穿订单簿，先把平均成交价填进“买入价”。</li>
+            <li>如果完整一套有效成本大于 $1，这是“锁亏对冲”；低于 $1 才是双边套利。</li>
+            <li>限价挂单未成交前不是完整对冲；只成交一边会留下方向性风险。</li>
+          </ul>
+        </div>
+      </div>
+    </main>
+  </section>
+
+  <footer>
+    <b>数据来源与口径：</b><br>
+    Predict.fun 文档写明 Makers pay no fee，Takers pay 0.018%–2%，并给出 Raw Fee = Base Fee % × min(Price, 1−Price) × Shares，10% fee discount 时乘以 0.9。来源：
+    <a href="https://docs.predict.fun/the-basics/predict-fees-and-limits" target="_blank" rel="noreferrer">Predict Fees and Limits</a>。<br>
+    Predict.fun 订单簿文档写明限价单会留在订单簿直到被他人 take，市价单会立即按当前可用挂单执行。来源：
+    <a href="https://docs.predict.fun/the-basics/understanding-the-order-book" target="_blank" rel="noreferrer">Understanding the Order Book</a>。<br>
+    Polymarket 文档写明 taker fee = C × feeRate × p × (1 − p)，Makers are never charged fees，且费率按类别不同；Polymarket 价格/订单簿文档说明市价单立即执行，限价单按指定价格或更优价格执行，且“market order”本质上是立即执行的限价单。来源：
+    <a href="https://docs.polymarket.com/trading/fees" target="_blank" rel="noreferrer">Polymarket Fees</a>、
+    <a href="https://docs.polymarket.com/concepts/prices-orderbook" target="_blank" rel="noreferrer">Prices & Orderbook</a>。<br>
+    免责声明：本页只做仓位和手续费数学计算，不构成投资建议；未纳入盘口深度、滑点、成交失败、链上 gas、充值提现、汇率和平台规则更新等风险。
+  </footer>
+</div>
+
+<script>
+(() => {
+  const cats = [
+    ["Crypto", 0.072],
+    ["Sports / Esports", 0.03],
+    ["Finance", 0.04],
+    ["Politics", 0.04],
+    ["Economics", 0.05],
+    ["Culture", 0.05],
+    ["Weather", 0.05],
+    ["Other / General", 0.05],
+    ["Mentions", 0.04],
+    ["Tech", 0.04],
+    ["Geopolitics / World Events", 0]
+  ];
+
+  const $ = id => document.getElementById(id);
+
+  const ids = [
+    "bankroll","roundShares",
+    "nameA","priceA","platformA","orderA","polyCatA","polyRateA","customFeeA","customFeePerShareA",
+    "nameB","priceB","platformB","orderB","polyCatB","polyRateB","customFeeB","customFeePerShareB",
+    "predictBase","predictDiscount"
+  ];
+
+  function initCats(){
+    ["polyCatA","polyCatB"].forEach(id => {
+      $(id).innerHTML = cats.map(([n,r]) => `<option value="${r}">${n}</option>`).join("");
+      $(id).value = "0.03";
+    });
+  }
+
+  function n(v, fallback=0){
+    const x = parseFloat(v);
+    return Number.isFinite(x) ? x : fallback;
+  }
+
+  function money(x, d=2){
+    return "$" + (Number.isFinite(x)
+      ? x.toLocaleString(undefined,{minimumFractionDigits:d, maximumFractionDigits:d})
+      : "—");
+  }
+
+  function num(x, d=2){
+    return Number.isFinite(x)
+      ? x.toLocaleString(undefined,{minimumFractionDigits:d, maximumFractionDigits:d})
+      : "—";
+  }
+
+  function pct(x, d=2){
+    return (Number.isFinite(x)
+      ? (x*100).toLocaleString(undefined,{minimumFractionDigits:d, maximumFractionDigits:d})
+      : "—") + "%";
+  }
+
+  function cents(p){
+    return (p*100).toLocaleString(undefined,{maximumFractionDigits:2}) + "¢";
+  }
+
+  function orderLabel(v){
+    if(v === "maker") return "限价挂单 / Maker";
+    if(v === "taker_limit") return "限价立即成交 / Taker";
+    return "市价 / Taker";
+  }
+
+  function platformLabel(v){
+    if(v === "predict") return "Predict.fun";
+    if(v === "poly") return "Polymarket";
+    return "自定义";
+  }
+
+  function syncVisibility(side){
+    const platform = $("platform"+side).value;
+    document.querySelectorAll(".poly"+side).forEach(el => el.classList.toggle("hide", platform !== "poly"));
+    document.querySelectorAll(".custom"+side).forEach(el => el.classList.toggle("hide", platform !== "custom"));
+  }
+
+  function syncPolyRate(side){
+    $("polyRate"+side).value = $("polyCat"+side).value;
+  }
+
+  function feePerShare(side, overrideOrder=null){
+    const p = Math.max(0, Math.min(0.999999, n($("price"+side).value)/100));
+    const platform = $("platform"+side).value;
+    const order = overrideOrder || $("order"+side).value;
+    const isMaker = order === "maker";
+
+    if(!Number.isFinite(p) || p <= 0) return 0;
+    if(isMaker) return 0;
+
+    if(platform === "predict"){
+      const base = n($("predictBase").value,2) / 100;
+      const discount = Math.max(0, Math.min(100, n($("predictDiscount").value,0))) / 100;
+      return base * (1 - discount) * Math.min(p, 1-p);
+    }
+
+    if(platform === "poly"){
+      const rate = n($("polyRate"+side).value,0.03);
+      return rate * p * (1-p);
+    }
+
+    const percent = n($("customFee"+side).value,0)/100;
+    const fixed = n($("customFeePerShare"+side).value,0);
+    return percent * p + fixed;
+  }
+
+  function legData(side, shares){
+    const p = n($("price"+side).value)/100;
+    const fps = feePerShare(side);
+    const fee = shares * fps;
+    const notional = shares * p;
+
+    return {
+      side,
+      name: $("name"+side).value.trim() || side,
+      p,
+      platform: $("platform"+side).value,
+      order: $("order"+side).value,
+      shares,
+      fps,
+      fee,
+      notional,
+      spend: notional + fee
+    };
+  }
+
+  function formulaText(){
+    const predBase = n($("predictBase").value,2);
+    const predDiscount = n($("predictDiscount").value,0);
+
+    return `Predict.fun Taker：fee/share = ${(predBase/100).toFixed(4)} × (1 - ${predDiscount}%折扣) × min(p, 1-p)
+Predict.fun Maker：fee/share = 0
+
+Polymarket Taker：fee/share = feeRate × p × (1-p)
+Polymarket Maker：fee/share = 0
+
+对冲：q = bankroll ÷ [(pA + feeA/share) + (pB + feeB/share)]`;
+  }
+
+  function calculate(){
+    ["A","B"].forEach(syncVisibility);
+
+    const bankroll = Math.max(0, n($("bankroll").value,1000));
+    const pA = n($("priceA").value)/100;
+    const pB = n($("priceB").value)/100;
+    const fpsA = feePerShare("A");
+    const fpsB = feePerShare("B");
+
+    let unitCost = pA + fpsA + pB + fpsB;
+    let shares = unitCost > 0 ? bankroll / unitCost : 0;
+
+    if($("roundShares").value === "floor") shares = Math.floor(shares);
+
+    const a = legData("A", shares);
+    const b = legData("B", shares);
+
+    const totalSpend = a.spend + b.spend;
+    const payout = shares;
+    const profit = payout - totalSpend;
+    const roi = totalSpend > 0 ? profit / totalSpend : 0;
+
+    const priceSum = pA + pB;
+    const noFeeQ = priceSum > 0 ? bankroll / priceSum : 0;
+    const noFeeProfit = noFeeQ - bankroll;
+
+    $("sharesEach").textContent = num(shares, 4);
+    $("payoutAny").textContent = money(payout, 2);
+    $("profitAny").textContent = money(profit, 2);
+    $("profitAny").className = "v " + (profit >= 0 ? "good" : "bad");
+    $("roiAny").textContent = "ROI：" + pct(roi, 3) + "；实际总花费 " + money(totalSpend,2);
+    $("setCost").textContent = money(unitCost, 4);
+
+    const arb = unitCost < 1
+      ? "双边套利：每 $1 兑付成本低于 $1"
+      : unitCost === 1
+        ? "刚好打平：不含其他成本"
+        : "锁亏对冲：每 $1 兑付成本高于 $1";
+
+    $("arbStatus").textContent = arb;
+    $("arbStatus").className = "small " + (unitCost < 1 ? "good" : unitCost > 1 ? "bad" : "warn");
+
+    $("legTable").innerHTML = [a,b].map(x => `
+      <tr>
+        <td><b>${escapeHtml(x.name)}</b></td>
+        <td>${platformLabel(x.platform)}<br><span style="color:#94a3b8">${orderLabel(x.order)}</span></td>
+        <td>${cents(x.p)}</td>
+        <td>${num(x.shares,4)}</td>
+        <td>${money(x.notional,2)}</td>
+        <td>${money(x.fee,4)}</td>
+        <td><b>${money(x.spend,2)}</b></td>
+        <td>${money(x.fps,6)}</td>
+      </tr>`).join("");
+
+    const compRows = ["A","B"].map(side => {
+      const p = n($("price"+side).value)/100;
+      const marketFee = shares * feePerShare(side, "taker");
+      const makerFee = shares * feePerShare(side, "maker");
+      const diff = marketFee - makerFee;
+
+      return `
+        <tr>
+          <td>
+            <b>${escapeHtml($("name"+side).value || side)}</b><br>
+            <span style="color:#94a3b8">${platformLabel($("platform"+side).value)} @ ${cents(p)}</span>
+          </td>
+          <td>${money(marketFee,4)}</td>
+          <td>${money(makerFee,4)}</td>
+          <td>${money(diff,4)}</td>
+        </tr>`;
+    });
+
+    $("feeCompare").innerHTML = compRows.join("");
+    $("formulaBox").textContent = formulaText();
+
+    const effectiveOver = unitCost - 1;
+
+    const sumStatus = priceSum < 1
+      ? `不算手续费，价格和为 ${money(priceSum,4)}，理论上有套利空间：约 ${money(noFeeProfit,2)} / ${money(bankroll,0)}。`
+      : `不算手续费，价格和为 ${money(priceSum,4)}，已经高于 $1；只做对冲会锁定约 ${money(noFeeProfit,2)}。`;
+
+    const makerWarn = (a.order === "maker" || b.order === "maker")
+      ? "你选择了限价挂单/Maker：手续费按 0 算，但挂单未成交前不是完整对冲；只成交一边会暴露方向风险。"
+      : "";
+
+    const takerWarn = (a.order !== "maker" || b.order !== "maker")
+      ? "市价/Taker 会产生手续费，且可能有滑点；大单应把订单簿的平均成交价填进买入价。"
+      : "";
+
+    $("warningBox").innerHTML = `${sumStatus}<br>算上当前手续费后，完整一套成本为 ${money(unitCost,4)}，等于每 $1 兑付${effectiveOver>=0 ? "多花" : "少花"} ${money(Math.abs(effectiveOver),4)}。${makerWarn ? "<br>"+makerWarn : ""}${takerWarn ? "<br>"+takerWarn : ""}`;
+
+    $("heroConclusion").textContent = profit >= 0 ? `锁盈 ${money(profit,2)}` : `锁亏 ${money(Math.abs(profit),2)}`;
+    $("heroConclusion").className = "value " + (profit >= 0 ? "good" : "bad");
+    $("heroSub").textContent = `每边买 ${num(shares,2)} shares；${a.name} 花 ${money(a.spend,2)}，${b.name} 花 ${money(b.spend,2)}。`;
+
+    window.lastResultText = `双边对冲结果：每边买 ${num(shares,4)} shares。${a.name} 花费 ${money(a.spend,2)}（成交额 ${money(a.notional,2)}，手续费 ${money(a.fee,4)}）；${b.name} 花费 ${money(b.spend,2)}（成交额 ${money(b.notional,2)}，手续费 ${money(b.fee,4)}）。任一赛果兑付 ${money(payout,2)}，锁定${profit>=0?"收益":"亏损"} ${money(Math.abs(profit),2)}，ROI ${pct(roi,3)}。`;
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>'"]/g, c => ({
+      "&":"&amp;",
+      "<":"&lt;",
+      ">":"&gt;",
+      "'":"&#39;",
+      '"':"&quot;"
+    }[c]));
+  }
+
+  function reset(){
+    $("bankroll").value = 1000;
+    $("roundShares").value = "none";
+
+    $("nameA").value = "Ninjas in Pyjamas";
+    $("priceA").value = 13;
+    $("platformA").value = "predict";
+    $("orderA").value = "taker";
+
+    $("nameB").value = "Bilibili Gaming";
+    $("priceB").value = 88;
+    $("platformB").value = "predict";
+    $("orderB").value = "taker";
+
+    $("polyCatA").value = "0.03";
+    $("polyRateA").value = "0.03";
+    $("polyCatB").value = "0.03";
+    $("polyRateB").value = "0.03";
+
+    $("customFeeA").value = 0;
+    $("customFeePerShareA").value = 0;
+    $("customFeeB").value = 0;
+    $("customFeePerShareB").value = 0;
+
+    $("predictBase").value = 2;
+    $("predictDiscount").value = 0;
+
+    calculate();
+  }
+
+  function setup(){
+    initCats();
+
+    ids.forEach(id => $(id).addEventListener("input", calculate));
+    ids.forEach(id => $(id).addEventListener("change", calculate));
+
+    ["A","B"].forEach(side => {
+      $("polyCat"+side).addEventListener("change", () => {
+        syncPolyRate(side);
+        calculate();
+      });
+    });
+
+    $("resetBtn").addEventListener("click", reset);
+
+    $("copyBtn").addEventListener("click", async () => {
+      try{
+        await navigator.clipboard.writeText(window.lastResultText || "");
+        $("copyBtn").textContent = "已复制";
+        setTimeout(() => $("copyBtn").textContent = "复制结果", 1200);
+      }catch(e){
+        alert(window.lastResultText || "暂无结果");
+      }
+    });
+
+    reset();
+  }
+
+  setup();
+})();
+</script>
+</body>
+</html>
