@@ -106,6 +106,11 @@
     .swapbtn:hover{border-color:var(--accent);color:var(--accent);}
     .swapbtn:active{transform:rotate(180deg);}
     .swap-row{display:flex;justify-content:center;margin:6px 0 -6px;}
+    .leftover{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;background:rgba(245,158,11,.14);color:var(--warn);border:1px solid rgba(245,158,11,.35);font-size:11px;font-weight:700;}
+    @keyframes flash{0%{background:var(--ring)}100%{background:transparent}}
+    .flash{animation:flash .6s ease-out;}
+    input[aria-invalid="true"]{border-color:var(--bad)!important;box-shadow:0 0 0 3px rgba(239,68,68,.18)!important;}
+    .muted-text{color:var(--muted);}
     .good{color:var(--good)!important}
     .bad{color:var(--bad)!important}
     .warn{color:var(--warn)!important}
@@ -189,7 +194,7 @@
       <div class="row">
         <div>
           <label for="bankroll">本金，USDT/USDC</label>
-          <input id="bankroll" type="number" step="0.01" value="1000">
+          <input id="bankroll" type="number" step="0.01" min="0" value="1000" inputmode="decimal">
         </div>
         <div>
           <label for="roundShares">份额处理</label>
@@ -210,7 +215,7 @@
           </div>
           <div>
             <label for="priceA">买入价，¢</label>
-            <input id="priceA" type="number" step="0.01" value="13">
+            <input id="priceA" type="number" step="0.01" min="0" max="100" value="13" inputmode="decimal">
           </div>
         </div>
 
@@ -272,7 +277,7 @@
           </div>
           <div>
             <label for="priceB">买入价，¢</label>
-            <input id="priceB" type="number" step="0.01" value="88">
+            <input id="priceB" type="number" step="0.01" min="0" max="100" value="88" inputmode="decimal">
           </div>
         </div>
 
@@ -323,11 +328,11 @@
         <div class="row">
           <div>
             <label for="predictBase">Taker Base Fee，%</label>
-            <input id="predictBase" type="number" step="0.01" value="2">
+            <input id="predictBase" type="number" step="0.01" min="0" max="100" value="2" inputmode="decimal">
           </div>
           <div>
             <label for="predictDiscount">手续费折扣，%</label>
-            <input id="predictDiscount" type="number" step="1" value="0">
+            <input id="predictDiscount" type="number" step="1" min="0" max="100" value="0" inputmode="decimal">
           </div>
         </div>
         <p style="font-size:12px">Predict.fun 邀请折扣常见为 10%，没有折扣填 0。</p>
@@ -479,7 +484,12 @@
     ["Geopolitics / World Events", 0]
   ];
 
-  const $ = id => document.getElementById(id);
+  const _elCache = new Map();
+  const $ = id => {
+    let el = _elCache.get(id);
+    if(!el){ el = document.getElementById(id); if(el) _elCache.set(id, el); }
+    return el;
+  };
 
   const ids = [
     "bankroll","roundShares",
@@ -488,16 +498,73 @@
     "predictBase","predictDiscount"
   ];
 
+  const PRICE_RANGE = {min:0, max:100};
+  const PERCENT_RANGE = {min:0, max:100};
+  const NUMERIC_CONSTRAINTS = {
+    bankroll:       {min:0},
+    priceA:         PRICE_RANGE,
+    priceB:         PRICE_RANGE,
+    predictBase:    PERCENT_RANGE,
+    predictDiscount:PERCENT_RANGE,
+    polyRateA:      {min:0, max:1},
+    polyRateB:      {min:0, max:1},
+    customFeeA:     PERCENT_RANGE,
+    customFeeB:     PERCENT_RANGE,
+    customFeePerShareA:{min:0},
+    customFeePerShareB:{min:0},
+  };
+
+  const clamp = (x, min=-Infinity, max=Infinity) => Math.min(max, Math.max(min, x));
+
+  function setText(id, value){
+    const el = $(id);
+    if(!el) return;
+    if(el.textContent === String(value)) return;
+    el.textContent = value;
+    flash(el);
+  }
+
+  function setHtml(id, value){
+    const el = $(id);
+    if(!el) return;
+    if(el.innerHTML === value) return;
+    el.innerHTML = value;
+    flash(el);
+  }
+
+  function flash(el){
+    el.classList.remove("flash");
+    void el.offsetWidth;
+    el.classList.add("flash");
+  }
+
+  let _rafId = 0;
+  function schedule(){
+    if(_rafId) return;
+    _rafId = requestAnimationFrame(() => { _rafId = 0; calculate(); });
+  }
+
+  function readNum(id){
+    const el = $(id);
+    if(!el) return 0;
+    const raw = parseFloat(el.value);
+    const c = NUMERIC_CONSTRAINTS[id];
+    if(!Number.isFinite(raw)){
+      el.setAttribute("aria-invalid","true");
+      return 0;
+    }
+    const min = c?.min ?? -Infinity;
+    const max = c?.max ?? Infinity;
+    const invalid = raw < min || raw > max;
+    el.setAttribute("aria-invalid", invalid ? "true" : "false");
+    return clamp(raw, min, max);
+  }
+
   function initCats(){
     ["polyCatA","polyCatB"].forEach(id => {
       $(id).innerHTML = cats.map(([n,r]) => `<option value="${r}">${n}</option>`).join("");
       $(id).value = "0.03";
     });
-  }
-
-  function n(v, fallback=0){
-    const x = parseFloat(v);
-    return Number.isFinite(x) ? x : fallback;
   }
 
   function money(x, d=2){
@@ -545,32 +612,30 @@
   }
 
   function feePerShare(side, overrideOrder=null){
-    const p = Math.max(0, Math.min(0.999999, n($("price"+side).value)/100));
+    const p = Math.min(0.999999, readNum("price"+side)/100);
     const platform = $("platform"+side).value;
     const order = overrideOrder || $("order"+side).value;
-    const isMaker = order === "maker";
 
-    if(!Number.isFinite(p) || p <= 0) return 0;
-    if(isMaker) return 0;
+    if(p <= 0) return 0;
+    if(order === "maker") return 0;
 
     if(platform === "predict"){
-      const base = n($("predictBase").value,2) / 100;
-      const discount = Math.max(0, Math.min(100, n($("predictDiscount").value,0))) / 100;
+      const base = readNum("predictBase") / 100;
+      const discount = readNum("predictDiscount") / 100;
       return base * (1 - discount) * Math.min(p, 1-p);
     }
 
     if(platform === "poly"){
-      const rate = n($("polyRate"+side).value,0.03);
-      return rate * p * (1-p);
+      return readNum("polyRate"+side) * p * (1-p);
     }
 
-    const percent = n($("customFee"+side).value,0)/100;
-    const fixed = n($("customFeePerShare"+side).value,0);
+    const percent = readNum("customFee"+side) / 100;
+    const fixed = readNum("customFeePerShare"+side);
     return percent * p + fixed;
   }
 
   function legData(side, shares){
-    const p = n($("price"+side).value)/100;
+    const p = readNum("price"+side)/100;
     const fps = feePerShare(side);
     const fee = shares * fps;
     const notional = shares * p;
@@ -590,8 +655,8 @@
   }
 
   function formulaText(){
-    const predBase = n($("predictBase").value,2);
-    const predDiscount = n($("predictDiscount").value,0);
+    const predBase = readNum("predictBase");
+    const predDiscount = readNum("predictDiscount");
 
     return `Predict.fun Taker：fee/share = ${(predBase/100).toFixed(4)} × (1 - ${predDiscount}%折扣) × min(p, 1-p)
 Predict.fun Maker：fee/share = 0
@@ -634,16 +699,16 @@ Polymarket Maker：fee/share = 0
   function calculate(){
     ["A","B"].forEach(syncVisibility);
 
-    const bankroll = Math.max(0, n($("bankroll").value,1000));
-    const pA = n($("priceA").value)/100;
-    const pB = n($("priceB").value)/100;
+    const bankroll = readNum("bankroll");
+    const pA = readNum("priceA")/100;
+    const pB = readNum("priceB")/100;
     const fpsA = feePerShare("A");
     const fpsB = feePerShare("B");
 
     let unitCost = pA + fpsA + pB + fpsB;
-    let shares = unitCost > 0 ? bankroll / unitCost : 0;
-
-    if($("roundShares").value === "floor") shares = Math.floor(shares);
+    const rawShares = unitCost > 0 ? bankroll / unitCost : 0;
+    const floored = $("roundShares").value === "floor";
+    let shares = floored ? Math.floor(rawShares) : rawShares;
 
     const a = legData("A", shares);
     const b = legData("B", shares);
@@ -652,17 +717,19 @@ Polymarket Maker：fee/share = 0
     const payout = shares;
     const profit = payout - totalSpend;
     const roi = totalSpend > 0 ? profit / totalSpend : 0;
+    const leftover = floored ? Math.max(0, bankroll - totalSpend) : 0;
 
     const priceSum = pA + pB;
     const noFeeQ = priceSum > 0 ? bankroll / priceSum : 0;
     const noFeeProfit = noFeeQ - bankroll;
 
-    $("sharesEach").textContent = num(shares, 4);
-    $("payoutAny").textContent = money(payout, 2);
-    $("profitAny").textContent = money(profit, 2);
+    const sharesTxt = num(shares, 4) + (floored ? ` <span class="leftover">未使用 ${money(leftover,2)}</span>` : "");
+    setHtml("sharesEach", sharesTxt);
+    setText("payoutAny", money(payout, 2));
+    setText("profitAny", money(profit, 2));
     $("profitAny").className = "v " + (profit >= 0 ? "good" : "bad");
-    $("roiAny").textContent = "ROI：" + pct(roi, 3) + "；实际总花费 " + money(totalSpend,2);
-    $("setCost").textContent = money(unitCost, 4);
+    setText("roiAny", "ROI：" + pct(roi, 3) + "；实际总花费 " + money(totalSpend,2));
+    setText("setCost", money(unitCost, 4));
     updateCostBar(unitCost);
 
     const arb = unitCost < 1
@@ -677,7 +744,7 @@ Polymarket Maker：fee/share = 0
     $("legTable").innerHTML = [a,b].map(x => `
       <tr>
         <td><b>${escapeHtml(x.name)}</b></td>
-        <td>${platformLabel(x.platform)}<br><span style="color:#94a3b8">${orderLabel(x.order)}</span></td>
+        <td>${platformLabel(x.platform)}<br><span class="muted-text">${orderLabel(x.order)}</span></td>
         <td>${cents(x.p)}</td>
         <td>${num(x.shares,4)}</td>
         <td>${money(x.notional,2)}</td>
@@ -687,7 +754,7 @@ Polymarket Maker：fee/share = 0
       </tr>`).join("");
 
     const compRows = ["A","B"].map(side => {
-      const p = n($("price"+side).value)/100;
+      const p = readNum("price"+side)/100;
       const marketFee = shares * feePerShare(side, "taker");
       const makerFee = shares * feePerShare(side, "maker");
       const diff = marketFee - makerFee;
@@ -696,7 +763,7 @@ Polymarket Maker：fee/share = 0
         <tr>
           <td>
             <b>${escapeHtml($("name"+side).value || side)}</b><br>
-            <span style="color:#94a3b8">${platformLabel($("platform"+side).value)} @ ${cents(p)}</span>
+            <span class="muted-text">${platformLabel($("platform"+side).value)} @ ${cents(p)}</span>
           </td>
           <td>${money(marketFee,4)}</td>
           <td>${money(makerFee,4)}</td>
@@ -851,7 +918,7 @@ Polymarket Maker：fee/share = 0
     initTheme();
     initCats();
 
-    const onChange = () => { calculate(); persistState(); };
+    const onChange = () => { schedule(); persistState(); };
     ids.forEach(id => $(id).addEventListener("input", onChange));
     ids.forEach(id => $(id).addEventListener("change", onChange));
 
