@@ -93,6 +93,19 @@
     .metric .k{font-size:12px;color:var(--muted);margin-bottom:8px;}
     .metric .v{font-size:24px;font-weight:900;letter-spacing:-.03em;}
     .metric .small{font-size:12px;color:var(--muted);margin-top:7px;line-height:1.45;}
+    .costbar{margin:4px 0 16px;padding:14px 16px;border:1px solid var(--line);border-radius:18px;background:rgba(2,6,23,.28);}
+    :root[data-theme="light"] .costbar{background:rgba(15,23,42,.03);}
+    .costbar-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px;font-size:12px;color:var(--muted);}
+    .costbar-head b{color:var(--text);font-size:14px;letter-spacing:-.01em;}
+    .costbar-track{position:relative;height:10px;border-radius:999px;background:var(--chip);overflow:hidden;}
+    .costbar-fill{position:absolute;top:0;left:0;height:100%;border-radius:999px;transition:width .35s ease, background .25s ease;background:linear-gradient(90deg,var(--good),var(--accent));}
+    .costbar-fill.over{background:linear-gradient(90deg,var(--warn),var(--bad));}
+    .costbar-mark{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--line-strong);}
+    .costbar-legend{display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;}
+    .swapbtn{display:inline-flex;align-items:center;justify-content:center;background:var(--chip);color:var(--sub);border:1px solid var(--line);border-radius:999px;width:36px;height:36px;cursor:pointer;transition:transform .2s ease,border-color .12s ease,color .12s ease;}
+    .swapbtn:hover{border-color:var(--accent);color:var(--accent);}
+    .swapbtn:active{transform:rotate(180deg);}
+    .swap-row{display:flex;justify-content:center;margin:6px 0 -6px;}
     .good{color:var(--good)!important}
     .bad{color:var(--bad)!important}
     .warn{color:var(--warn)!important}
@@ -239,6 +252,12 @@
         </div>
       </div>
 
+      <div class="swap-row">
+        <button type="button" class="swapbtn" id="swapBtn" aria-label="对调 A 与 B" title="对调 A 与 B">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16"/><path d="M3 8l4-4 4 4"/><path d="M17 20V4"/><path d="M21 16l-4 4-4-4"/></svg>
+        </button>
+      </div>
+
       <div class="leg">
         <div class="leg-title"><h3>B 结果</h3><span class="pill">例：BLG</span></div>
 
@@ -342,6 +361,22 @@
           <div class="k">完整一套有效成本</div>
           <div class="v" id="setCost">—</div>
           <div class="small" id="arbStatus">—</div>
+        </div>
+      </div>
+
+      <div class="costbar" aria-live="polite">
+        <div class="costbar-head">
+          <span>每 $1 兑付成本</span>
+          <b id="costbarLabel">—</b>
+        </div>
+        <div class="costbar-track" role="img" aria-label="成本进度条">
+          <div class="costbar-fill" id="costbarFill" style="width:0%"></div>
+          <div class="costbar-mark" id="costbarMark" style="left:50%" title="$1 基准线"></div>
+        </div>
+        <div class="costbar-legend">
+          <span>$0.80（套利线）</span>
+          <span>$1.00（打平）</span>
+          <span>$1.20（锁亏上限）</span>
         </div>
       </div>
 
@@ -563,6 +598,35 @@ Polymarket Maker：fee/share = 0
 对冲：q = bankroll ÷ [(pA + feeA/share) + (pB + feeB/share)]`;
   }
 
+  function updateCostBar(unitCost){
+    const min = 0.8, max = 1.2;
+    const clamped = Math.max(min, Math.min(max, Number.isFinite(unitCost) ? unitCost : 1));
+    const pctFill = ((clamped - min) / (max - min)) * 100;
+    const pctMark = ((1 - min) / (max - min)) * 100;
+    const fill = $("costbarFill");
+    fill.style.width = pctFill.toFixed(2) + "%";
+    fill.classList.toggle("over", unitCost > 1);
+    $("costbarMark").style.left = pctMark + "%";
+    const label = unitCost < 1
+      ? `套利空间 ${money(1 - unitCost, 4)}/\$1`
+      : unitCost > 1
+        ? `锁亏 ${money(unitCost - 1, 4)}/\$1`
+        : "恰好打平";
+    $("costbarLabel").textContent = `${money(unitCost,4)} · ${label}`;
+    $("costbarLabel").className = unitCost < 1 ? "good" : unitCost > 1 ? "bad" : "warn";
+  }
+
+  const SWAP_IDS = ["name","price","platform","order","polyCat","polyRate","customFee","customFeePerShare"];
+  function swapLegs(){
+    SWAP_IDS.forEach(key => {
+      const a = $(key+"A"), b = $(key+"B");
+      if(!a || !b) return;
+      const av = a.value; a.value = b.value; b.value = av;
+    });
+    ["A","B"].forEach(syncVisibility);
+    calculate();
+  }
+
   function calculate(){
     ["A","B"].forEach(syncVisibility);
 
@@ -595,6 +659,7 @@ Polymarket Maker：fee/share = 0
     $("profitAny").className = "v " + (profit >= 0 ? "good" : "bad");
     $("roiAny").textContent = "ROI：" + pct(roi, 3) + "；实际总花费 " + money(totalSpend,2);
     $("setCost").textContent = money(unitCost, 4);
+    updateCostBar(unitCost);
 
     const arb = unitCost < 1
       ? "双边套利：每 $1 兑付成本低于 $1"
@@ -736,6 +801,7 @@ Polymarket Maker：fee/share = 0
     });
 
     $("resetBtn").addEventListener("click", reset);
+    $("swapBtn").addEventListener("click", swapLegs);
 
     $("copyBtn").addEventListener("click", async () => {
       try{
