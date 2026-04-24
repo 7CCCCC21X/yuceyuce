@@ -79,7 +79,23 @@
     .stat .label{font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:600;}
     .stat .value{font-size:24px;font-weight:800;letter-spacing:-.02em;}
     .stat .sub{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5;}
-    .grid{display:grid;grid-template-columns:480px 1fr;gap:18px;align-items:start;}
+    .grid{display:flex;flex-direction:column;gap:16px;align-items:stretch;}
+    .grid > main.results{order:1;}
+    .grid > .platforms-grid{order:2;}
+    .grid > aside.inputs{order:3;}
+    .platforms-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    @media (max-width:900px){ .platforms-grid{grid-template-columns:1fr;} }
+    .platform-card{padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--panel-a);}
+    .platform-card .urlbox{margin:0;border:none;padding:0;background:transparent;}
+    .platform-card .urlbox-books{grid-template-columns:1fr 1fr;}
+    .platform-card .plat-head{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;margin-bottom:8px;}
+    .platform-card .plat-head .plat-badge{padding:2px 8px;border-radius:999px;font-size:10.5px;letter-spacing:.03em;}
+    .platform-card.plat-poly .plat-badge{background:rgba(16,185,129,.14);color:var(--good);}
+    .platform-card.plat-predict .plat-badge{background:rgba(124,58,237,.14);color:var(--accent);}
+    .platform-card .plat-fees{margin-top:10px;padding:8px 10px;border:1px dashed var(--line);border-radius:8px;font-size:12px;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-variant-numeric:tabular-nums;}
+    .platform-card .plat-fees.hide{display:none;}
+    .platform-card .plat-fees span{color:var(--muted);font-size:11px;}
+    .platform-card .plat-fees b{text-align:right;font-weight:700;}
     .legs-grid{margin-top:12px;}
     @media (min-width:981px){
       .legs-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:start;}
@@ -394,9 +410,21 @@
     details.collapse[open] > summary::after{transform:rotate(180deg);}
     details.collapse > .dbody{padding:0 12px 12px;}
 
-    /* Verdict flatter */
-    .verdict{border-radius:14px;box-shadow:none;}
+    /* Verdict flatter + tighter */
+    .verdict{border-radius:14px;box-shadow:none;padding:14px 16px;}
     .verdict-side{background:transparent;}
+    .verdict-amount{font-size:28px;}
+    .verdict-sub{font-size:12.5px;line-height:1.55;}
+    .summary{gap:8px;}
+    .summary .metric{padding:10px 12px;}
+    .summary .metric .k{font-size:11px;}
+    .summary .metric .v{font-size:20px;}
+    .summary .metric .small{font-size:11px;line-height:1.45;}
+    .results.card{padding:18px;}
+    .results.card h2{font-size:17px;margin-bottom:10px;}
+    .arb-banner{padding:6px 12px;}
+    .pair-strip{padding:6px 12px;}
+    .pair-strip .pval{font-size:12px;}
 
     /* Bookcard default-summary */
     .bookcard .rows{gap:1px 10px;}
@@ -416,12 +444,12 @@
     .note b{color:var(--warn);}
 
     /* Top-of-page bankroll / size bar */
-    .size-bar{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px;padding:10px 12px;margin:0 0 12px;border:1px solid var(--line);border-radius:12px;background:transparent;}
+    .size-bar{display:grid;grid-template-columns:2fr 1fr;gap:10px;padding:10px 12px;margin:0 0 12px;border:1px solid var(--line);border-radius:12px;background:transparent;}
     .size-bar .size-cell{display:flex;flex-direction:column;gap:4px;}
     .size-bar label{font-size:11px;color:var(--muted);font-weight:600;margin:0;}
     .size-bar input,.size-bar select{padding:8px 10px;font-size:13px;}
-    .size-bar .size-bankroll input,.size-bar .size-shares input{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;}
-    @media (max-width:700px){ .size-bar{grid-template-columns:1fr 1fr;} }
+    .size-bar .size-bankroll input{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;}
+    @media (max-width:700px){ .size-bar{grid-template-columns:1fr;} }
 
     /* Drop inputs card H2 since sections are labeled already */
     .inputs > h2{display:none;}
@@ -453,11 +481,43 @@
     .leg-src .ls-link{color:var(--accent);text-decoration:none;font-weight:600;}
     .leg-src .ls-link:hover{text-decoration:underline;}
 
-    /* Per-leg money readout: 应花 $X · N 份 */
-    .leg-money{margin:0 0 10px;padding:8px 10px;border-radius:8px;background:rgba(124,58,237,.06);border:1px dashed var(--line);font-variant-numeric:tabular-nums;display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+    /* Per-leg money: editable anchor + derived shares */
+    .leg-money{margin:0 0 10px;padding:8px 10px;border-radius:8px;border:1px dashed var(--line);background:rgba(124,58,237,.06);font-variant-numeric:tabular-nums;display:flex;flex-direction:column;gap:3px;}
     .leg-money.hide{display:none;}
-    .leg-money .lm-spend{font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.01em;}
-    .leg-money .lm-shares{font-size:11.5px;color:var(--muted);}
+    .leg-money .lm-row{display:flex;align-items:center;gap:6px;}
+    .leg-money .lm-label{font-size:11px;color:var(--muted);}
+    .leg-money .lm-input{flex:1;font-size:18px;font-weight:800;padding:4px 8px;border:1px solid transparent;background:transparent;color:var(--text);border-radius:6px;min-width:0;}
+    .leg-money .lm-input:focus{outline:none;border-color:var(--accent);}
+    .leg-money.anchored .lm-input{border-color:var(--accent);background:rgba(124,58,237,.08);}
+    .leg.leg-b .leg-money.anchored .lm-input{border-color:var(--good);background:rgba(16,185,129,.08);}
+    .leg-money .lm-clear{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px;display:none;}
+    .leg-money.anchored .lm-clear{display:inline-block;}
+    .leg-money .lm-clear:hover{background:rgba(148,163,184,.15);color:var(--text);}
+    .leg-money .lm-copy{background:transparent;border:1px solid var(--line);color:var(--sub);cursor:pointer;font-size:11px;padding:3px 8px;border-radius:6px;font-weight:600;transition:all .15s ease;}
+    .leg-money .lm-copy:hover{border-color:var(--accent);color:var(--accent);background:rgba(124,58,237,.06);}
+    .leg-money .lm-copy.copied{border-color:var(--good);color:var(--good);background:rgba(16,185,129,.08);}
+    .leg-money .lm-copy.copied::before{content:"✓ ";}
+
+    /* Toast notifications */
+    .toast-host{position:fixed;bottom:18px;right:18px;display:flex;flex-direction:column;gap:6px;z-index:80;pointer-events:none;}
+    .toast{pointer-events:auto;padding:8px 14px;border-radius:10px;font-size:12.5px;color:var(--text);background:var(--panel-a);border:1px solid var(--line-strong);box-shadow:0 10px 24px rgba(0,0,0,.25);animation:toast-in .18s ease-out;max-width:320px;}
+    :root[data-theme="light"] .toast{background:#fff;box-shadow:0 8px 20px rgba(15,23,42,.12);}
+    .toast.ok{border-left:3px solid var(--good);}
+    .toast.bad{border-left:3px solid var(--bad);}
+    .toast.info{border-left:3px solid var(--accent);}
+    .toast.fadeout{opacity:0;transform:translateY(4px);transition:opacity .25s ease,transform .25s ease;}
+    @keyframes toast-in{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+    /* Platform empty-state hint */
+    .plat-empty{padding:18px 10px;text-align:center;color:var(--muted);font-size:12px;border:1px dashed var(--line);border-radius:10px;margin-top:10px;}
+    .plat-empty.hide{display:none;}
+    .plat-empty b{display:block;color:var(--sub);font-size:13px;margin-bottom:4px;font-weight:600;}
+
+    /* Help tooltip (native title feels slow; add an abbr-like marker) */
+    .jargon{border-bottom:1px dotted var(--muted);cursor:help;}
+    .leg-money .lm-shares{font-size:11.5px;color:var(--muted);padding-left:2px;}
+    .leg-money.overbudget{border-color:var(--bad);background:rgba(239,68,68,.06);}
+    .leg-money.overbudget .lm-shares{color:var(--bad);}
     .leg.leg-a .leg-money{background:rgba(124,58,237,.06);}
     .leg.leg-b .leg-money{background:rgba(16,185,129,.06);}
 
@@ -537,17 +597,6 @@
       <label for="bankroll">本金，USD</label>
       <input id="bankroll" type="number" step="0.01" min="0" value="1000" inputmode="decimal">
     </div>
-    <div class="size-cell size-shares hide">
-      <label for="targetShares">目标份额</label>
-      <input id="targetShares" type="number" step="1" min="0" value="200" inputmode="numeric">
-    </div>
-    <div class="size-cell">
-      <label for="sizeMode">规模模式</label>
-      <select id="sizeMode">
-        <option value="bankroll">按本金 USD</option>
-        <option value="shares">按固定份额</option>
-      </select>
-    </div>
     <div class="size-cell">
       <label for="roundShares">份额处理</label>
       <select id="roundShares">
@@ -558,9 +607,9 @@
   </div>
 
   <div id="arbBanner" class="arb-banner hide" aria-live="polite">
-    <div class="arb-group"><span class="arb-lbl">成本</span><span class="arb-val" id="arbUnit">—</span></div>
-    <div class="arb-group"><span class="arb-lbl">ROI</span><span class="arb-val" id="arbRoi">—</span></div>
-    <div class="arb-live arb-group" id="arbLiveWrap" hidden><span class="arb-lbl">现价 VWAP</span><span class="arb-val" id="arbLive">—</span></div>
+    <div class="arb-group"><span class="arb-lbl jargon" title="买一份 Yes+No 对冲组合的总成本：两边买入价 + 两边手续费。小于 $1 = 对冲有利润；大于 $1 = 锁亏">成本</span><span class="arb-val" id="arbUnit">—</span></div>
+    <div class="arb-group"><span class="arb-lbl jargon" title="投入回报率：(兑付金额 − 总花费) ÷ 总花费">ROI</span><span class="arb-val" id="arbRoi">—</span></div>
+    <div class="arb-live arb-group" id="arbLiveWrap" hidden><span class="arb-lbl jargon" title="Volume-Weighted Avg Price，按你要的规模在订单簿上吃到的加权平均价。比 best ask 更贴近真实成交">现价 VWAP</span><span class="arb-val" id="arbLive">—</span></div>
     <div class="arb-ts"><span id="arbTs">—</span><label><input type="checkbox" id="autoRefresh"> 自动刷新</label></div>
   </div>
 
@@ -578,38 +627,49 @@
   </div>
 
   <section class="grid">
+
+    <section class="platforms-grid" id="platformsRow">
+      <div class="platform-card plat-poly">
+        <div class="plat-head"><span class="plat-badge">Polymarket</span><span id="polyHeadTitle">Polymarket 抓盘</span></div>
+        <div class="urlbox">
+          <div class="urlbox-row">
+            <input id="marketUrl" type="url" placeholder="https://polymarket.com/event/..." autocomplete="off">
+            <button type="button" class="secondary" id="fetchUrlBtn">抓取</button>
+            <button type="button" class="secondary refresh-btn" id="refreshUrlBtn" disabled title="盘口在动——重新抓取当前链接" aria-label="刷新当前链接">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
+            </button>
+          </div>
+          <div id="urlStatus" class="urlbox-status">粘贴 Polymarket 事件链接 → 自动填 A/B 两侧 VWAP 价。</div>
+          <div id="marketPicker" class="market-picker hide"></div>
+          <div id="polyPairCandidates" class="pair-cands hide"></div>
+          <div id="polyEmpty" class="plat-empty"><b>未抓盘</b>粘贴 polymarket.com/event/... 链接，点"抓取"</div>
+          <div id="urlBooks" class="urlbox-books" hidden></div>
+          <div id="polyFees" class="plat-fees hide"></div>
+        </div>
+      </div>
+
+      <div class="platform-card plat-predict">
+        <div class="plat-head"><span class="plat-badge">Predict.fun</span><span id="predictHeadTitle">Predict.fun 抓盘</span></div>
+        <div class="urlbox">
+          <div class="urlbox-row">
+            <input id="predictUrl" type="url" placeholder="https://predict.fun/market/..." autocomplete="off">
+            <button type="button" class="secondary" id="fetchPredictBtn">抓取</button>
+            <button type="button" class="secondary refresh-btn" id="refreshPredictBtn" disabled title="重新抓取当前 Predict 链接" aria-label="刷新 Predict 链接">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
+            </button>
+          </div>
+          <div id="predictStatus" class="urlbox-status">粘贴 Predict.fun 链接 → 选子市场 → 填入 A/B。</div>
+          <div id="predictMarketPicker" class="market-picker hide"></div>
+          <div id="predictPairCandidates" class="pair-cands hide"></div>
+          <div id="predictEmpty" class="plat-empty"><b>未抓盘</b>粘贴 predict.fun/market/... 链接，点"抓取"</div>
+          <div id="predictBooks" class="urlbox-books" hidden></div>
+          <div id="predictFees" class="plat-fees hide"></div>
+        </div>
+      </div>
+    </section>
+
     <aside class="inputs card">
       <h2>输入</h2>
-
-      <div class="urlbox">
-        <div class="urlbox-title"><span>Polymarket 抓盘</span></div>
-        <div class="urlbox-row">
-          <input id="marketUrl" type="url" placeholder="https://polymarket.com/event/..." autocomplete="off">
-          <button type="button" class="secondary" id="fetchUrlBtn">抓取</button>
-          <button type="button" class="secondary refresh-btn" id="refreshUrlBtn" disabled title="盘口在动——重新抓取当前链接" aria-label="刷新当前链接">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
-          </button>
-        </div>
-        <div id="urlStatus" class="urlbox-status">粘贴 Polymarket 事件链接 → 自动填 A/B 两侧 VWAP 价。</div>
-        <div id="marketPicker" class="market-picker hide"></div>
-        <div id="polyPairCandidates" class="pair-cands hide"></div>
-        <div id="urlBooks" class="urlbox-books" hidden></div>
-      </div>
-
-      <div class="urlbox">
-        <div class="urlbox-title"><span>Predict.fun 抓盘</span></div>
-        <div class="urlbox-row">
-          <input id="predictUrl" type="url" placeholder="https://predict.fun/market/..." autocomplete="off">
-          <button type="button" class="secondary" id="fetchPredictBtn">抓取</button>
-          <button type="button" class="secondary refresh-btn" id="refreshPredictBtn" disabled title="重新抓取当前 Predict 链接" aria-label="刷新 Predict 链接">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
-          </button>
-        </div>
-        <div id="predictStatus" class="urlbox-status">粘贴 Predict.fun 链接 → 选子市场 → 填入 A/B。</div>
-        <div id="predictMarketPicker" class="market-picker hide"></div>
-        <div id="predictPairCandidates" class="pair-cands hide"></div>
-        <div id="predictBooks" class="urlbox-books" hidden></div>
-      </div>
 
       <details class="collapse">
         <summary>预设组合</summary>
@@ -628,7 +688,15 @@
       <div class="leg leg-a">
         <div class="leg-title"><h3>A 结果</h3><div id="legSourceA" class="leg-src hide"></div></div>
         <div id="legBookA" class="leg-book hide"></div>
-        <div id="legMoneyA" class="leg-money hide"></div>
+        <div id="legMoneyA" class="leg-money hide">
+          <div class="lm-row">
+            <span class="lm-label">应花 $</span>
+            <input class="lm-input" id="legAmountA" type="number" step="0.01" min="0" inputmode="decimal" placeholder="按本金自动" title="在此输入金额会把计算锚定到 A 侧，B 侧自动推出所需金额">
+            <button type="button" class="lm-copy" id="legCopyA" title="复制金额到剪贴板">复制</button>
+            <button type="button" class="lm-clear" id="legClearA" title="取消锚定">×</button>
+          </div>
+          <div class="lm-shares" id="legSharesA">—</div>
+        </div>
 
         <div class="row">
           <div>
@@ -655,7 +723,7 @@
             </select>
           </div>
           <div>
-            <label for="orderA">订单</label>
+            <label for="orderA" class="jargon" title="市价/Taker 吃已有挂单立即成交，走 Taker 手续费；限价/Maker 挂在簿上等别人吃，通常 0 手续费">订单</label>
             <select id="orderA">
               <option value="taker">市价 / 立即成交（Taker）</option>
               <option value="maker">限价挂单 / 等别人吃单（Maker）</option>
@@ -697,7 +765,15 @@
       <div class="leg leg-b">
         <div class="leg-title"><h3>B 结果</h3><div id="legSourceB" class="leg-src hide"></div></div>
         <div id="legBookB" class="leg-book hide"></div>
-        <div id="legMoneyB" class="leg-money hide"></div>
+        <div id="legMoneyB" class="leg-money hide">
+          <div class="lm-row">
+            <span class="lm-label">应花 $</span>
+            <input class="lm-input" id="legAmountB" type="number" step="0.01" min="0" inputmode="decimal" placeholder="按本金自动" title="在此输入金额会把计算锚定到 B 侧，A 侧自动推出所需金额">
+            <button type="button" class="lm-copy" id="legCopyB" title="复制金额到剪贴板">复制</button>
+            <button type="button" class="lm-clear" id="legClearB" title="取消锚定">×</button>
+          </div>
+          <div class="lm-shares" id="legSharesB">—</div>
+        </div>
 
         <div class="row">
           <div>
@@ -724,7 +800,7 @@
             </select>
           </div>
           <div>
-            <label for="orderB">订单</label>
+            <label for="orderB" class="jargon" title="市价/Taker 吃已有挂单立即成交，走 Taker 手续费；限价/Maker 挂在簿上等别人吃，通常 0 手续费">订单</label>
             <select id="orderB">
               <option value="taker">市价 / 立即成交（Taker）</option>
               <option value="maker">限价挂单 / 等别人吃单（Maker）</option>
@@ -960,6 +1036,8 @@
   </footer>
 </div>
 
+<div class="toast-host" id="toastHost" aria-live="polite" aria-atomic="true"></div>
+
 <div class="mobile-summary" id="mobileSummary" role="status" aria-live="polite">
   <div class="mobile-summary-inner">
     <span class="verdict-tag small" id="mobTag">—</span>
@@ -1000,7 +1078,7 @@
   };
 
   const ids = [
-    "bankroll","roundShares","sizeMode","targetShares","autoRefresh",
+    "bankroll","roundShares","autoRefresh",
     "nameA","priceA","platformA","orderA","polyCatA","polyRateA","customFeeA","customFeePerShareA",
     "nameB","priceB","platformB","orderB","polyCatB","polyRateB","customFeeB","customFeePerShareB",
     "predictBase","predictDiscount"
@@ -1010,7 +1088,6 @@
   const PERCENT_RANGE = {min:0, max:100};
   const NUMERIC_CONSTRAINTS = {
     bankroll:       {min:0},
-    targetShares:   {min:0},
     priceA:         PRICE_RANGE,
     priceB:         PRICE_RANGE,
     predictBase:    PERCENT_RANGE,
@@ -1558,18 +1635,134 @@ Polymarket Maker：fee/share = 0
     renderSideSource(side);
   }
 
+  // Estimate fees for buying YES + NO on one platform at VWAP for current size.
+  // Reuses feePerShareAt so predict/poly formulas stay single-source.
+  function renderPlatformFees(platform){
+    const elId = platform === "poly" ? "polyFees" : "predictFees";
+    const el = $(elId);
+    if(!el) return;
+    let yesBook, noBook, titleYes, titleNo;
+    if(platform === "poly"){
+      if(!_currentEvent || !_currentEvent.bookA || !_currentEvent.bookB){ el.classList.add("hide"); el.innerHTML = ""; return; }
+      yesBook = _currentEvent.bookA; noBook = _currentEvent.bookB;
+      titleYes = _currentEvent.markets[_currentEvent.chosenA]?.name || "A";
+      titleNo = _currentEvent.markets[_currentEvent.chosenB]?.name || "B";
+    } else {
+      if(!_currentPredict || !_currentPredict.yesBook){ el.classList.add("hide"); el.innerHTML = ""; return; }
+      yesBook = _currentPredict.yesBook; noBook = _currentPredict.noBook;
+      titleYes = _currentPredict.yesName || "Yes";
+      titleNo = _currentPredict.noName || "No";
+    }
+    const target = currentSizeTarget();
+    const walkY = walkBook(sortedAsks(yesBook), target);
+    const walkN = walkBook(sortedAsks(noBook), target);
+    const pY = walkY.avg, pN = walkN.avg;
+    // Use the platform's own fee formula via a synthetic "side" context.
+    // Temporarily read platform fees by calling feePerShareAt with a side that
+    // is configured to this platform — we synthesize by looking up base params.
+    const prevPlatA = $("platformA").value;
+    $("platformA").value = platform;
+    const feeY = pY !== null ? feePerShareAt("A", pY) : null;
+    const feeN = pN !== null ? feePerShareAt("A", pN) : null;
+    $("platformA").value = prevPlatA;
+    const sharesY = pY !== null && target.notional > 0 ? (target.notional / pY) : 0;
+    const sharesN = pN !== null && target.notional > 0 ? (target.notional / pN) : 0;
+    const totalFeeY = feeY !== null ? feeY * sharesY : null;
+    const totalFeeN = feeN !== null ? feeN * sharesN : null;
+    const label = platform === "poly" ? "Polymarket" : "Predict.fun";
+    el.classList.remove("hide");
+    el.innerHTML = `
+      <span>${escapeHtml(titleYes)} · VWAP</span><b>${pY !== null ? (pY*100).toFixed(2)+"¢" : "—"}</b>
+      <span>手续费 (${label} Taker)</span><b>${totalFeeY !== null ? money(totalFeeY,2) : "—"}</b>
+      <span>${escapeHtml(titleNo)} · VWAP</span><b>${pN !== null ? (pN*100).toFixed(2)+"¢" : "—"}</b>
+      <span>手续费 (${label} Taker)</span><b>${totalFeeN !== null ? money(totalFeeN,2) : "—"}</b>
+      <span>两侧手续费合计</span><b>${(totalFeeY !== null || totalFeeN !== null) ? money((totalFeeY||0)+(totalFeeN||0),2) : "—"}</b>`;
+  }
+
+  let _legAnchor = null; // {side: "A"|"B", amount: number}
+
   function renderLegMoney(side, info){
     const el = $("legMoney"+side);
     if(!el) return;
-    if(!info || !(info.spend > 0)){
+    if(!info || !(info.shares > 0)){
       el.classList.add("hide");
-      el.innerHTML = "";
       return;
     }
     el.classList.remove("hide");
-    el.innerHTML = `
-      <span class="lm-spend">${money(info.spend, 2)}</span>
-      <span class="lm-shares">${num(info.shares, 4)} 份 @ ${(info.price*100).toFixed(2)}¢</span>`;
+    const input = $("legAmount"+side);
+    const sharesEl = $("legShares"+side);
+    const isAnchor = !!(_legAnchor && _legAnchor.side === side);
+    el.classList.toggle("anchored", isAnchor);
+    if(input && document.activeElement !== input){
+      input.value = info.spend > 0 ? info.spend.toFixed(2) : "";
+    }
+    if(sharesEl){
+      const base = `${num(info.shares, 4)} 份 @ ${(info.price*100).toFixed(2)}¢`;
+      sharesEl.textContent = info.over
+        ? `${base} · 超出本金 ${money(info.over, 2)}`
+        : base;
+    }
+    el.classList.toggle("overbudget", !!info.over);
+  }
+
+  function onLegAmountInput(side){
+    const input = $("legAmount"+side);
+    if(!input) return;
+    const v = parseFloat(input.value);
+    if(Number.isFinite(v) && v > 0){
+      _legAnchor = {side, amount: v};
+    } else {
+      _legAnchor = null;
+    }
+    calculate();
+  }
+
+  function clearLegAnchor(){
+    _legAnchor = null;
+    if($("legAmountA")) $("legAmountA").value = "";
+    if($("legAmountB")) $("legAmountB").value = "";
+    calculate();
+    toast("已取消锚定", "info");
+  }
+
+  // ─── Toast ───
+  function toast(msg, kind = "ok", ms = 2200){
+    const host = $("toastHost");
+    if(!host) return;
+    const el = document.createElement("div");
+    el.className = `toast ${kind}`;
+    el.textContent = msg;
+    host.appendChild(el);
+    setTimeout(() => {
+      el.classList.add("fadeout");
+      setTimeout(() => el.remove(), 260);
+    }, ms);
+  }
+
+  async function copyLegAmount(side){
+    const input = $("legAmount"+side);
+    const btn = $("legCopy"+side);
+    if(!input || !btn) return;
+    const v = input.value || "0";
+    try{
+      await navigator.clipboard.writeText(v);
+      btn.textContent = "已复制";
+      btn.classList.add("copied");
+      toast(`已复制 ${side} 应花金额 $${v}`, "ok");
+      setTimeout(() => {
+        btn.textContent = "复制";
+        btn.classList.remove("copied");
+      }, 1600);
+    }catch(_){
+      toast("复制失败，请手动选中", "bad");
+    }
+  }
+
+  function updateEmptyStates(){
+    const polyEmpty = $("polyEmpty");
+    const predictEmpty = $("predictEmpty");
+    if(polyEmpty) polyEmpty.classList.toggle("hide", !!_currentEvent);
+    if(predictEmpty) predictEmpty.classList.toggle("hide", !!_currentPredict);
   }
 
   function renderSideBook(side){
@@ -1712,6 +1905,7 @@ Polymarket Maker：fee/share = 0
     refreshPairingStrip();
     calculate();
     startAutoRefreshIfEnabled();
+    toast(`已抓 Predict.fun：${title}`, "ok");
     triggerPolyAutoSearch(title);
   }
 
@@ -1725,6 +1919,7 @@ Polymarket Maker：fee/share = 0
     if(!_currentEvent && cands.length && cands[0].score >= 0.75 && (cands.length === 1 || cands[0].score - (cands[1]?.score || 0) >= 0.15)){
       container.innerHTML = `<div class="pair-cand-head">已自动锁定 Polymarket 对家：<b>${escapeHtml(cands[0].title)}</b>（${Math.round(cands[0].score*100)}%）</div>`;
       $("marketUrl").value = `https://polymarket.com/event/${cands[0].slug}`;
+      toast(`自动锁定 Polymarket 对家（${Math.round(cands[0].score*100)}%）`, "info");
       fetchAndFillFromUrl();
       return;
     }
@@ -1743,6 +1938,7 @@ Polymarket Maker：fee/share = 0
     if(!_currentPredict && cands.length && cands[0].score >= 0.75 && (cands.length === 1 || cands[0].score - (cands[1]?.score || 0) >= 0.15)){
       const pick = cands[0];
       container.innerHTML = `<div class="pair-cand-head">已自动锁定 Predict.fun 对家：<b>${escapeHtml(pick.title)}</b>（${Math.round(pick.score*100)}%）</div>`;
+      toast(`自动锁定 Predict.fun 对家（${Math.round(pick.score*100)}%）`, "info");
       if(pick.slug){
         $("predictUrl").value = `https://predict.fun/market/${pick.slug}`;
         fetchAndFillFromPredictUrl();
@@ -1889,17 +2085,11 @@ Polymarket Maker：fee/share = 0
   }
 
   function currentSizeTarget(){
-    const mode = $("sizeMode") ? $("sizeMode").value : "bankroll";
-    if(mode === "shares"){
-      const n = readNum("targetShares");
-      return {shares: n > 0 ? n : Infinity, notional: Infinity, mode};
-    }
     const b = readNum("bankroll");
-    return {shares: Infinity, notional: b > 0 ? b/2 : Infinity, mode};
+    return {shares: Infinity, notional: b > 0 ? b/2 : Infinity, mode: "bankroll"};
   }
 
   function sizeLabel(t){
-    if(t.mode === "shares") return `份额 ${num(t.shares, 0)}`;
     return `$${num(t.notional, 0)}/边`;
   }
 
@@ -1994,12 +2184,9 @@ Polymarket Maker：fee/share = 0
         <h4><span>${escapeHtml(title)}</span></h4>
         ${summary}
         ${depthLine}
-        <details>
-          <summary>展开 5 档深度</summary>
-          <div class="rows"><div class="lbl">ask</div><div class="lbl">size</div>${askRows}</div>
-          <div class="spread">${spread}</div>
-          <div class="rows"><div class="lbl">bid</div><div class="lbl">size</div>${bidRows}</div>
-        </details>
+        <div class="rows"><div class="lbl">ask</div><div class="lbl">size</div>${askRows}</div>
+        <div class="spread">${spread}</div>
+        <div class="rows"><div class="lbl">bid</div><div class="lbl">size</div>${bidRows}</div>
       </div>
     `;
   }
@@ -2214,14 +2401,13 @@ Polymarket Maker：fee/share = 0
     books.innerHTML = renderBookCard(mA.name, bookA, target) + renderBookCard(mB.name, bookB, target);
     refreshPairingStrip();
     startAutoRefreshIfEnabled();
+    toast(`已抓 Polymarket：${_currentEvent.title || parsed.slug}`, "ok");
     triggerPredictAutoSearch(_currentEvent.title);
   }
 
   function calculate(){
     ["A","B"].forEach(syncVisibility);
-    syncSizeModeVisibility();
 
-    const mode = $("sizeMode") ? $("sizeMode").value : "bankroll";
     const bankroll = readNum("bankroll");
     const pA = readNum("priceA")/100;
     const pB = readNum("priceB")/100;
@@ -2231,9 +2417,10 @@ Polymarket Maker：fee/share = 0
     let unitCost = pA + fpsA + pB + fpsB;
     const floored = $("roundShares").value === "floor";
     let shares;
-    if(mode === "shares"){
-      const t = readNum("targetShares");
-      shares = floored ? Math.floor(t) : t;
+    if(_legAnchor && (_legAnchor.side === "A" || _legAnchor.side === "B")){
+      const unitSide = _legAnchor.side === "A" ? (pA + fpsA) : (pB + fpsB);
+      const raw = unitSide > 0 ? _legAnchor.amount / unitSide : 0;
+      shares = floored ? Math.floor(raw) : raw;
     } else {
       const rawShares = unitCost > 0 ? bankroll / unitCost : 0;
       shares = floored ? Math.floor(rawShares) : rawShares;
@@ -2243,10 +2430,11 @@ Polymarket Maker：fee/share = 0
     const b = legData("B", shares);
 
     const totalSpend = a.spend + b.spend;
+    const over = totalSpend > bankroll ? totalSpend - bankroll : 0;
     const payout = shares;
     const profit = payout - totalSpend;
     const roi = totalSpend > 0 ? profit / totalSpend : 0;
-    const leftover = (mode === "bankroll" && floored) ? Math.max(0, bankroll - totalSpend) : 0;
+    const leftover = (!_legAnchor && floored) ? Math.max(0, bankroll - totalSpend) : 0;
 
     const priceSum = pA + pB;
     const noFeeQ = priceSum > 0 ? bankroll / priceSum : 0;
@@ -2485,15 +2673,14 @@ Polymarket Maker：fee/share = 0
     renderPartialFill();
     renderArbBanner({unitCost, roi, profit, shares, status});
     renderSideBook("A"); renderSideBook("B");
-    renderLegMoney("A", {spend: a.spend, shares, price: a.p});
-    renderLegMoney("B", {spend: b.spend, shares, price: b.p});
+    renderLegMoney("A", {spend: a.spend, shares, price: a.p, over});
+    renderLegMoney("B", {spend: b.spend, shares, price: b.p, over});
+    renderPlatformFees("poly");
+    renderPlatformFees("predict");
+    updateEmptyStates();
   }
 
-  function syncSizeModeVisibility(){
-    const mode = $("sizeMode") ? $("sizeMode").value : "bankroll";
-    document.querySelectorAll(".size-bankroll").forEach(el => el.classList.toggle("hide", mode !== "bankroll"));
-    document.querySelectorAll(".size-shares").forEach(el => el.classList.toggle("hide", mode !== "shares"));
-  }
+  function syncSizeModeVisibility(){ /* removed: size mode toggle no longer in UI */ }
 
   function renderArbBanner({unitCost, roi, profit, shares, status}){
     const banner = $("arbBanner");
@@ -2742,11 +2929,8 @@ Polymarket Maker：fee/share = 0
   function reset(){
     $("bankroll").value = 1000;
     $("roundShares").value = "none";
-    $("sizeMode").value = "bankroll";
-    $("targetShares").value = 200;
     $("autoRefresh").checked = false;
     stopAutoRefresh();
-    syncSizeModeVisibility();
 
     $("nameA").value = "Ninjas in Pyjamas";
     $("priceA").value = 13;
@@ -2797,7 +2981,6 @@ Polymarket Maker：fee/share = 0
       else el.value = state[id];
     });
     ["A","B"].forEach(syncVisibility);
-    syncSizeModeVisibility();
   }
 
   function persistState(){
@@ -2888,6 +3071,21 @@ Polymarket Maker：fee/share = 0
         syncPolyRate(side);
         onChange();
       });
+      $("legAmount"+side).addEventListener("input", () => onLegAmountInput(side));
+      $("legClear"+side).addEventListener("click", clearLegAnchor);
+      $("legCopy"+side).addEventListener("click", () => copyLegAmount(side));
+    });
+
+    // Global: Ctrl/Cmd+Enter anywhere triggers fetch of whichever URL is non-empty.
+    document.addEventListener("keydown", (e) => {
+      if((e.ctrlKey || e.metaKey) && e.key === "Enter"){
+        e.preventDefault();
+        const pm = ($("marketUrl").value || "").trim();
+        const pd = ($("predictUrl").value || "").trim();
+        if(pm) fetchAndFillFromUrl();
+        else if(pd) fetchAndFillFromPredictUrl();
+        else toast("先粘贴任意一边的 URL", "info");
+      }
     });
 
     $("resetBtn").addEventListener("click", () => { reset(); persistState(); });
@@ -2941,7 +3139,6 @@ Polymarket Maker：fee/share = 0
       if(e.key === "Enter"){ e.preventDefault(); fetchAndFillFromUrl(); }
     });
 
-    $("sizeMode").addEventListener("change", syncSizeModeVisibility);
     $("autoRefresh").addEventListener("change", () => {
       if($("autoRefresh").checked) startAutoRefreshIfEnabled();
       else stopAutoRefresh();
