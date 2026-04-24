@@ -182,6 +182,26 @@
     .risklist li::before{content:"";position:absolute;left:4px;top:11px;width:6px;height:6px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 3px rgba(245,158,11,.18);}
     :root[data-theme="light"] .risklist li{color:#78350f;}
     .copy-actions{display:flex;gap:8px;flex-wrap:wrap;}
+    .presets{display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 14px;}
+    .preset-chip{background:var(--chip);color:var(--sub);border:1px solid var(--line);border-radius:999px;padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:none;transition:border-color .12s,color .12s,background .12s;}
+    .preset-chip:hover{border-color:var(--accent);color:var(--accent);}
+    .preset-chip.active{background:rgba(124,58,237,.18);color:var(--accent);border-color:rgba(124,58,237,.45);}
+    .stepper{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:13px;overflow:hidden;background:var(--input);transition:border .16s,box-shadow .16s;}
+    .stepper:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring);}
+    .stepper input{border:0;border-radius:0;flex:1;min-width:0;text-align:center;background:transparent;}
+    .stepper input:focus{box-shadow:none;border:0;}
+    .stepper input[aria-invalid="true"]{box-shadow:none!important;border:0!important;color:var(--bad);}
+    .stepper:has(input[aria-invalid="true"]){border-color:var(--bad);box-shadow:0 0 0 3px rgba(239,68,68,.18);}
+    .stepper-btn{background:transparent;color:var(--sub);border:0;width:34px;font-size:18px;font-weight:800;cursor:pointer;padding:0;box-shadow:none;border-radius:0;user-select:none;transition:background .12s,color .12s;}
+    .stepper-btn:hover{background:rgba(124,58,237,.14);color:var(--accent);}
+    .stepper-btn:active{background:rgba(124,58,237,.22);}
+    details.advanced{margin-top:12px;}
+    details.advanced summary{cursor:pointer;padding:10px 14px;border:1px solid var(--line);border-radius:13px;background:var(--chip);color:var(--sub);font-size:13px;font-weight:700;list-style:none;user-select:none;transition:border-color .12s,color .12s;}
+    details.advanced summary::-webkit-details-marker{display:none;}
+    details.advanced summary::after{content:"▾";float:right;transition:transform .2s ease;}
+    details.advanced[open] summary::after{transform:rotate(180deg);}
+    details.advanced summary:hover{border-color:var(--accent);color:var(--accent);}
+    details.advanced > .leg{margin-top:8px;}
     .hide{display:none;}
     @media (max-width:980px){
       .hero,.grid,.explain{grid-template-columns:1fr}
@@ -190,10 +210,13 @@
     }
     @media (max-width:620px){
       body{padding:16px 10px 50px}
-      .row,.row-3,.summary{grid-template-columns:1fr}
+      .row{grid-template-columns:1fr 1fr;gap:8px;}
+      .row-3{grid-template-columns:1fr 1fr;gap:8px;}
+      .summary{grid-template-columns:1fr 1fr;gap:8px;}
       h1{font-size:25px}
       .hero-main,.hero-side,.inputs,.results{padding:16px}
-      .actions{flex-direction:column}
+      .actions{flex-wrap:wrap;}
+      .actions button{flex:1 1 auto;min-width:96px;}
       .verdict{grid-template-columns:1fr;text-align:left;}
       .verdict-side{text-align:left;}
       .verdict-amount{font-size:24px;}
@@ -202,6 +225,15 @@
       .table-wrap.expanded{overflow-x:auto;}
       .table-wrap th,.table-wrap td{padding:10px 8px;font-size:12px;}
       .table-head{flex-wrap:wrap;}
+      .metric{min-height:0;}
+      .metric .v{font-size:20px;}
+      .hint{font-size:10.5px;}
+      .leg{padding:12px;}
+      label{margin-bottom:5px;}
+      input,select{padding:10px 10px;}
+    }
+    @media (max-width:380px){
+      .row,.row-3,.summary{grid-template-columns:1fr;}
     }
   </style>
 </head>
@@ -253,15 +285,23 @@
     <aside class="inputs card">
       <h2>输入</h2>
 
+      <div class="presets" role="group" aria-label="常用场景预设">
+        <button type="button" class="preset-chip" data-preset="predict-taker">双 Predict · Taker</button>
+        <button type="button" class="preset-chip" data-preset="predict-taker-10">Predict · Taker · 10% 返点</button>
+        <button type="button" class="preset-chip" data-preset="poly-taker">双 Polymarket · Sports</button>
+        <button type="button" class="preset-chip" data-preset="both-maker">两边 Maker（挂单）</button>
+        <button type="button" class="preset-chip" data-preset="cross">Predict × Polymarket</button>
+      </div>
+
       <div class="row">
         <div>
           <label for="bankroll">本金，USDT/USDC</label>
-          <small class="hint">整笔对冲预算，两边总花费上限。</small>
+          <small class="hint">两边总花费上限。</small>
           <input id="bankroll" type="number" step="0.01" min="0" value="1000" inputmode="decimal">
         </div>
         <div>
           <label for="roundShares">份额处理</label>
-          <small class="hint">允许小数用于理论计算；整数更接近实际下单。</small>
+          <small class="hint">整数更接近实际下单。</small>
           <select id="roundShares">
             <option value="none">允许小数份额</option>
             <option value="floor">向下取整</option>
@@ -279,8 +319,12 @@
           </div>
           <div>
             <label for="priceA">买入价，¢</label>
-            <small class="hint">0–100 之间，13 表示 $0.13。</small>
-            <input id="priceA" type="number" step="0.01" min="0" max="100" value="13" inputmode="decimal">
+            <small class="hint">0–100；Shift+点按步进 0.1。</small>
+            <div class="stepper">
+              <button type="button" class="stepper-btn" data-for="priceA" data-step="-1" aria-label="A 价格减 1¢">−</button>
+              <input id="priceA" type="number" step="0.01" min="0" max="100" value="13" inputmode="decimal">
+              <button type="button" class="stepper-btn" data-for="priceA" data-step="1" aria-label="A 价格加 1¢">+</button>
+            </div>
           </div>
         </div>
 
@@ -295,7 +339,7 @@
           </div>
           <div>
             <label for="orderA">订单</label>
-            <small class="hint">市价按 Taker 费；挂单按 Maker（未成交前不是完整对冲）。</small>
+            <small class="hint">市价按 Taker 费，挂单按 Maker。</small>
             <select id="orderA">
               <option value="taker">市价 / 立即成交（Taker）</option>
               <option value="maker">限价挂单 / 等别人吃单（Maker）</option>
@@ -343,8 +387,12 @@
           </div>
           <div>
             <label for="priceB">买入价，¢</label>
-            <small class="hint">0–100 之间，88 表示 $0.88。</small>
-            <input id="priceB" type="number" step="0.01" min="0" max="100" value="88" inputmode="decimal">
+            <small class="hint">0–100；Shift+点按步进 0.1。</small>
+            <div class="stepper">
+              <button type="button" class="stepper-btn" data-for="priceB" data-step="-1" aria-label="B 价格减 1¢">−</button>
+              <input id="priceB" type="number" step="0.01" min="0" max="100" value="88" inputmode="decimal">
+              <button type="button" class="stepper-btn" data-for="priceB" data-step="1" aria-label="B 价格加 1¢">+</button>
+            </div>
           </div>
         </div>
 
@@ -359,7 +407,7 @@
           </div>
           <div>
             <label for="orderB">订单</label>
-            <small class="hint">市价按 Taker 费；挂单按 Maker（未成交前不是完整对冲）。</small>
+            <small class="hint">市价按 Taker 费，挂单按 Maker。</small>
             <select id="orderB">
               <option value="taker">市价 / 立即成交（Taker）</option>
               <option value="maker">限价挂单 / 等别人吃单（Maker）</option>
@@ -391,24 +439,27 @@
         </div>
       </div>
 
-      <div class="leg">
-        <div class="leg-title">
-          <h3>Predict.fun 参数</h3>
-          <span class="datechip"><span class="dotmark"></span>费率口径：官方文档 2026-01</span>
-        </div>
-        <div class="row">
-          <div>
-            <label for="predictBase">Taker Base Fee，%</label>
-            <small class="hint">Predict.fun Taker 费率上限，官方文档为 2%。</small>
-            <input id="predictBase" type="number" step="0.01" min="0" max="100" value="2" inputmode="decimal">
+      <details class="advanced">
+        <summary>高级参数 · Predict.fun 全局费率</summary>
+        <div class="leg">
+          <div class="leg-title">
+            <h3>Predict.fun 参数</h3>
+            <span class="datechip"><span class="dotmark"></span>费率口径：官方文档 2026-01</span>
           </div>
-          <div>
-            <label for="predictDiscount">手续费折扣，%</label>
-            <small class="hint">邀请返点常见 10%，无折扣填 0。</small>
-            <input id="predictDiscount" type="number" step="1" min="0" max="100" value="0" inputmode="decimal">
+          <div class="row">
+            <div>
+              <label for="predictBase">Taker Base Fee，%</label>
+              <small class="hint">官方文档为 2%。</small>
+              <input id="predictBase" type="number" step="0.01" min="0" max="100" value="2" inputmode="decimal">
+            </div>
+            <div>
+              <label for="predictDiscount">手续费折扣，%</label>
+              <small class="hint">邀请返点常见 10%，无折扣填 0。</small>
+              <input id="predictDiscount" type="number" step="1" min="0" max="100" value="0" inputmode="decimal">
+            </div>
           </div>
         </div>
-      </div>
+      </details>
 
       <div class="actions">
         <button type="button" id="resetBtn">恢复截图示例</button>
@@ -591,6 +642,14 @@
     ["Tech", 0.04],
     ["Geopolitics / World Events", 0]
   ];
+
+  const PRESETS = {
+    "predict-taker":    {platformA:"predict", platformB:"predict", orderA:"taker", orderB:"taker", predictDiscount:0},
+    "predict-taker-10": {platformA:"predict", platformB:"predict", orderA:"taker", orderB:"taker", predictDiscount:10},
+    "poly-taker":       {platformA:"poly", platformB:"poly", orderA:"taker", orderB:"taker", polyCatA:"0.03", polyRateA:"0.03", polyCatB:"0.03", polyRateB:"0.03"},
+    "both-maker":       {orderA:"maker", orderB:"maker"},
+    "cross":            {platformA:"predict", platformB:"poly", orderA:"taker", orderB:"taker", polyCatB:"0.03", polyRateB:"0.03"}
+  };
 
   const _elCache = new Map();
   const $ = id => {
@@ -820,6 +879,25 @@ Polymarket Maker：fee/share = 0
     });
     ["A","B"].forEach(syncVisibility);
     calculate();
+  }
+
+  function applyPreset(key){
+    const p = PRESETS[key];
+    if(!p) return;
+    Object.entries(p).forEach(([k,v]) => { if($(k)) $(k).value = v; });
+    ["A","B"].forEach(syncVisibility);
+    calculate();
+    persistState();
+  }
+
+  function stepPrice(id, step, fine){
+    const input = $(id);
+    if(!input) return;
+    const cur = parseFloat(input.value);
+    const base = Number.isFinite(cur) ? cur : 0;
+    const next = Math.max(0, Math.min(100, parseFloat((base + step * fine).toFixed(2))));
+    input.value = fine < 1 ? next.toFixed(1) : String(next);
+    input.dispatchEvent(new Event("input", {bubbles:true}));
   }
 
   function calculate(){
@@ -1172,6 +1250,19 @@ Polymarket Maker：fee/share = 0
       const expanded = wrap.classList.toggle("expanded");
       btn.textContent = expanded ? "收起明细" : "展开明细";
       btn.setAttribute("aria-expanded", expanded ? "true" : "false");
+    });
+
+    document.querySelectorAll(".preset-chip").forEach(chip => {
+      chip.addEventListener("click", () => applyPreset(chip.getAttribute("data-preset")));
+    });
+
+    document.querySelectorAll(".stepper-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const id = btn.getAttribute("data-for");
+        const step = parseFloat(btn.getAttribute("data-step"));
+        const fine = e.shiftKey ? 0.1 : 1;
+        stepPrice(id, step, fine);
+      });
     });
 
     reset();
