@@ -348,6 +348,72 @@
     @media (max-width:380px){
       .row,.row-3,.summary{grid-template-columns:1fr;}
     }
+
+    /* ===== Quieter UI overrides ===== */
+    html,body{background:var(--bg);}                          /* drop radial glow */
+    .card{box-shadow:none;background:var(--panel-a);}
+    .hero-compact:after{display:none;}                         /* kill decorative blob */
+    .stat{background:transparent;border-radius:12px;}
+    .summary .metric{background:transparent;border-radius:12px;}
+    .urlbox{background:transparent;border-style:solid;}
+    .bookcard{background:transparent;}
+    :root[data-theme="light"] .bookcard,
+    :root[data-theme="light"] .urlbox,
+    :root[data-theme="light"] .summary .metric{background:transparent;}
+
+    /* Arb banner: flat, inline, single row — no sticky, no blur */
+    .arb-banner{position:static;margin:0 0 12px;padding:8px 12px;border-radius:10px;background:transparent;border:1px solid var(--line);backdrop-filter:none;-webkit-backdrop-filter:none;display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;font-size:12px;}
+    :root[data-theme="light"] .arb-banner{background:transparent;}
+    .arb-banner .arb-group{flex-direction:row;align-items:baseline;gap:6px;}
+    .arb-banner .arb-lbl{font-size:11px;text-transform:none;letter-spacing:0;}
+    .arb-banner .arb-live{padding:0;background:transparent;}
+    :root[data-theme="light"] .arb-banner .arb-live{background:transparent;}
+    .arb-banner .arb-ts label{gap:4px;}
+
+    /* Pair strip: compact one-line feel */
+    .pair-strip{margin:0 0 12px;padding:8px 12px;border-radius:10px;background:transparent;}
+    .pair-strip .pval{font-weight:600;font-size:12.5px;}
+    .pair-strip .pmeta{font-size:11px;}
+
+    /* Numeric alignment */
+    input[type="number"],.num,.v,.bookcard .rows > div:not(.lbl),.arb-val,td .num{font-variant-numeric:tabular-nums;}
+    table td:nth-child(n+3){text-align:right;}
+
+    /* Hide the costbar chunk — the arb banner + verdict already cover this */
+    .costbar{display:none;}
+
+    /* Simpler legs */
+    .leg{background:transparent;border:1px solid var(--line);box-shadow:none;}
+    :root[data-theme="light"] .leg{background:transparent;}
+
+    /* Presets chip row — lighter weight, hidden inside a details */
+    details.collapse{margin:8px 0;border:1px solid var(--line);border-radius:10px;background:transparent;}
+    details.collapse > summary{cursor:pointer;padding:8px 12px;font-size:12.5px;color:var(--sub);font-weight:600;list-style:none;user-select:none;display:flex;align-items:center;gap:6px;}
+    details.collapse > summary::-webkit-details-marker{display:none;}
+    details.collapse > summary::after{content:"▾";font-size:10px;margin-left:auto;color:var(--muted);transition:transform .2s ease;}
+    details.collapse[open] > summary::after{transform:rotate(180deg);}
+    details.collapse > .dbody{padding:0 12px 12px;}
+
+    /* Verdict flatter */
+    .verdict{border-radius:14px;box-shadow:none;}
+    .verdict-side{background:transparent;}
+
+    /* Bookcard default-summary */
+    .bookcard .rows{gap:1px 10px;}
+    .bookcard .rows > div:not(.lbl){text-align:right;}
+    .bookcard .rows > div.lbl{text-align:left;}
+    .bookcard details{margin-top:4px;}
+    .bookcard details > summary{cursor:pointer;font-size:11px;color:var(--muted);list-style:none;user-select:none;padding:2px 0;}
+    .bookcard details > summary::-webkit-details-marker{display:none;}
+    .bookcard details > summary::after{content:" ▾";color:var(--muted);}
+    .bookcard details[open] > summary::after{content:" ▴";}
+    .bookcard .booksum{font-size:12px;margin:4px 0;color:var(--sub);display:flex;justify-content:space-between;gap:10px;}
+    .bookcard .booksum .sub{color:var(--muted);font-size:11px;}
+
+    /* Help sections — tone down */
+    .explain h3{font-weight:600;}
+    .note{background:transparent;border-left:3px solid var(--warn);padding:8px 12px;border-radius:0 8px 8px 0;}
+    .note b{color:var(--warn);}
   </style>
 </head>
 <body>
@@ -389,41 +455,29 @@
     </details>
   </section>
 
+  <div id="arbBanner" class="arb-banner hide" aria-live="polite">
+    <div class="arb-group"><span class="arb-lbl">成本</span><span class="arb-val" id="arbUnit">—</span></div>
+    <div class="arb-group"><span class="arb-lbl">ROI</span><span class="arb-val" id="arbRoi">—</span></div>
+    <div class="arb-live arb-group" id="arbLiveWrap" hidden><span class="arb-lbl">现价 VWAP</span><span class="arb-val" id="arbLive">—</span></div>
+    <div class="arb-ts"><span id="arbTs">—</span><label><input type="checkbox" id="autoRefresh"> 自动刷新</label></div>
+  </div>
+
+  <div id="pairStrip" class="pair-strip hide">
+    <div class="pcol">
+      <span class="plbl">Polymarket</span>
+      <span class="pval" id="pairPolyTitle">—</span>
+      <span class="pmeta" id="pairPolyMeta">—</span>
+    </div>
+    <div class="pcol">
+      <span class="plbl">Predict.fun</span>
+      <span class="pval" id="pairPredictTitle">—</span>
+      <span class="pmeta" id="pairPredictMeta">—</span>
+    </div>
+  </div>
+
   <section class="grid">
     <aside class="inputs card">
       <h2>输入</h2>
-
-      <div id="arbBanner" class="arb-banner hide" aria-live="polite">
-        <div class="arb-group">
-          <span class="arb-lbl">A/B 已填 · 每 $1 兑付</span>
-          <span class="arb-val" id="arbUnit">—</span>
-        </div>
-        <div class="arb-group">
-          <span class="arb-lbl">ROI</span>
-          <span class="arb-val" id="arbRoi">—</span>
-        </div>
-        <div class="arb-live arb-group" id="arbLiveWrap" hidden>
-          <span class="arb-lbl">📡 现价 VWAP（两边书）</span>
-          <span class="arb-val" id="arbLive">—</span>
-        </div>
-        <div class="arb-ts">
-          <span id="arbTs">—</span>
-          <label><input type="checkbox" id="autoRefresh"> 自动刷新 5s</label>
-        </div>
-      </div>
-
-      <div id="pairStrip" class="pair-strip hide">
-        <div class="pcol">
-          <span class="plbl">Polymarket</span>
-          <span class="pval" id="pairPolyTitle">—</span>
-          <span class="pmeta" id="pairPolyMeta">—</span>
-        </div>
-        <div class="pcol">
-          <span class="plbl">Predict.fun</span>
-          <span class="pval" id="pairPredictTitle">—</span>
-          <span class="pmeta" id="pairPredictMeta">—</span>
-        </div>
-      </div>
 
       <div class="urlbox">
         <div class="urlbox-title">
@@ -459,13 +513,18 @@
         <div id="predictBooks" class="urlbox-books" hidden></div>
       </div>
 
-      <div class="presets" role="group" aria-label="常用场景预设">
-        <button type="button" class="preset-chip" data-preset="predict-taker">双 Predict · Taker</button>
-        <button type="button" class="preset-chip" data-preset="predict-taker-10">Predict · Taker · 10% 返点</button>
-        <button type="button" class="preset-chip" data-preset="poly-taker">双 Polymarket · Sports</button>
-        <button type="button" class="preset-chip" data-preset="both-maker">两边 Maker（挂单）</button>
-        <button type="button" class="preset-chip" data-preset="cross">Predict × Polymarket</button>
-      </div>
+      <details class="collapse">
+        <summary>预设组合</summary>
+        <div class="dbody">
+          <div class="presets" role="group" aria-label="常用场景预设">
+            <button type="button" class="preset-chip" data-preset="predict-taker">双 Predict · Taker</button>
+            <button type="button" class="preset-chip" data-preset="predict-taker-10">Predict · Taker · 10% 返点</button>
+            <button type="button" class="preset-chip" data-preset="poly-taker">双 Polymarket · Sports</button>
+            <button type="button" class="preset-chip" data-preset="both-maker">两边 Maker（挂单）</button>
+            <button type="button" class="preset-chip" data-preset="cross">Predict × Polymarket</button>
+          </div>
+        </div>
+      </details>
 
       <div class="row">
         <div>
@@ -670,7 +729,7 @@
           <div class="verdict-amount" id="verdictAmount">—</div>
           <div class="verdict-sub" id="verdictSub">—</div>
         </div>
-        <div class="verdict-side">
+        <div class="verdict-side" hidden>
           <div class="k">每 $1 兑付成本</div>
           <div class="v" id="verdictCost">—</div>
         </div>
@@ -741,96 +800,83 @@
       </div>
 
       <div class="mini" style="margin-top:14px;">
-        <h3>盈亏平衡反推</h3>
-        <p style="font-size:12px;margin-bottom:4px;">保留其他条件不变时，需要调到多少才能每 $1 兑付刚好打平。</p>
-        <div class="breakeven" id="breakeven"></div>
-      </div>
-
-      <div class="mini" style="margin-top:14px;">
         <h3>执行方案 <span class="pill" style="margin-left:6px;font-weight:600;">Playbook</span></h3>
-        <p style="font-size:12px;margin-bottom:4px;">按当前价格推荐的下单顺序与最高限价。仅供参考，不构成投资建议。</p>
         <ol class="playbook" id="playbook"></ol>
-      </div>
-
-      <div class="mini" style="margin-top:14px;">
-        <h3>部分成交模拟 <span class="pill" style="margin-left:6px;font-weight:600;">Partial Fill</span></h3>
-        <p style="font-size:12px;margin-bottom:4px;">调整两边成交比例，看只成交一部分时的真实盈亏和方向暴露。对冲最容易踩的坑就是单边没挂上。</p>
-        <div class="pf-sliders">
-          <div class="pf-slider">
-            <label for="pfA"><span>A 成交比例</span><span class="pct" id="pfAPct">100%</span></label>
-            <input type="range" id="pfA" min="0" max="100" value="100" step="1">
-          </div>
-          <div class="pf-slider">
-            <label for="pfB"><span>B 成交比例</span><span class="pct" id="pfBPct">100%</span></label>
-            <input type="range" id="pfB" min="0" max="100" value="100" step="1">
-          </div>
-        </div>
-        <div class="pf-scenarios">
-          <div class="pf-scenario"><div class="k" id="pfKA">若 A 赢</div><div class="v" id="pfProfitA">—</div></div>
-          <div class="pf-scenario"><div class="k" id="pfKB">若 B 赢</div><div class="v" id="pfProfitB">—</div></div>
-          <div class="pf-scenario"><div class="k">若两边都没赢（罕见）</div><div class="v" id="pfProfitNone">—</div></div>
-        </div>
-        <div class="pf-summary" id="pfSummary">—</div>
       </div>
 
       <div class="note" id="warningBox">—</div>
 
-      <div class="note" style="margin-top:6px;">
-        <b>执行前请确认：</b>
-        <ul class="risklist">
-          <li>两个市场是否对应同一事件，结算条件完全一致。</li>
-          <li>当前订单簿深度是否够吃掉计划仓位，避免吃穿。</li>
-          <li>大单请把平均成交价填入"买入价"，不要只用盘口价。</li>
-          <li>平台最低下单额、最小份额单位可能让两边无法同时按计划成交。</li>
-          <li>限价挂单未成交前不是完整对冲，单边成交会暴露方向风险。</li>
-          <li>Predict.fun ↔ Polymarket 间的充值、提现、链上 gas、汇率成本需自行加回。</li>
-          <li>手续费规则可能随时更新，以官方文档为准。</li>
-        </ul>
-      </div>
+      <details class="collapse">
+        <summary>盈亏平衡反推</summary>
+        <div class="dbody">
+          <p style="font-size:12px;margin-bottom:6px;color:var(--muted);">保留其他条件不变时，需要调到多少才能每 $1 兑付刚好打平。</p>
+          <div class="breakeven" id="breakeven"></div>
+        </div>
+      </details>
 
-      <div class="explain">
-        <div class="mini">
-          <h3>订单类型怎么理解</h3>
-          <ul>
-            <li><b>市价 / 立即成交</b>：吃掉订单簿里已有挂单，按 Taker 算手续费。</li>
-            <li><b>限价挂单 / 等别人吃单</b>：你的单子留在订单簿里，按 Maker 算；两家这里都按 0 手续费处理。</li>
-            <li><b>限价但跨价立即成交</b>：虽然名字是限价，但本质是立即吃单，按 Taker 算。</li>
+      <details class="collapse">
+        <summary>部分成交模拟</summary>
+        <div class="dbody">
+          <p style="font-size:12px;margin-bottom:6px;color:var(--muted);">调整两边成交比例，看只成交一部分时的真实盈亏和方向暴露。</p>
+          <div class="pf-sliders">
+            <div class="pf-slider">
+              <label for="pfA"><span>A 成交比例</span><span class="pct" id="pfAPct">100%</span></label>
+              <input type="range" id="pfA" min="0" max="100" value="100" step="1">
+            </div>
+            <div class="pf-slider">
+              <label for="pfB"><span>B 成交比例</span><span class="pct" id="pfBPct">100%</span></label>
+              <input type="range" id="pfB" min="0" max="100" value="100" step="1">
+            </div>
+          </div>
+          <div class="pf-scenarios">
+            <div class="pf-scenario"><div class="k" id="pfKA">若 A 赢</div><div class="v" id="pfProfitA">—</div></div>
+            <div class="pf-scenario"><div class="k" id="pfKB">若 B 赢</div><div class="v" id="pfProfitB">—</div></div>
+            <div class="pf-scenario"><div class="k">若两边都没赢（罕见）</div><div class="v" id="pfProfitNone">—</div></div>
+          </div>
+          <div class="pf-summary" id="pfSummary">—</div>
+        </div>
+      </details>
+
+      <details class="collapse">
+        <summary>执行前清单与风险</summary>
+        <div class="dbody">
+          <ul class="risklist">
+            <li>两个市场是否对应同一事件，结算条件完全一致。</li>
+            <li>当前订单簿深度是否够吃掉计划仓位，避免吃穿。</li>
+            <li>大单请把平均成交价填入"买入价"，不要只用盘口价。</li>
+            <li>平台最低下单额、最小份额单位可能让两边无法同时按计划成交。</li>
+            <li>限价挂单未成交前不是完整对冲，单边成交会暴露方向风险。</li>
+            <li>Predict.fun ↔ Polymarket 间的充值、提现、链上 gas、汇率成本需自行加回。</li>
+            <li>手续费规则可能随时更新，以官方文档为准。</li>
           </ul>
         </div>
+      </details>
 
-        <div class="mini">
-          <h3>本页手续费公式</h3>
+      <details class="collapse">
+        <summary>手续费公式 / 订单类型</summary>
+        <div class="dbody">
+          <div class="mini" style="margin:0 0 10px;">
+            <ul style="margin:0 0 8px;">
+              <li><b>市价 / 立即成交</b>：吃订单簿里已有挂单，按 Taker 收费。</li>
+              <li><b>限价挂单 / Maker</b>：留在簿上等别人吃，两家这里都按 0 处理。</li>
+              <li><b>限价但跨价立即成交</b>：本质即时吃单，按 Taker 收费。</li>
+            </ul>
+          </div>
           <div class="formula" id="formulaBox">—</div>
         </div>
-      </div>
+      </details>
 
-      <div class="explain">
-        <div class="mini">
-          <h3>市价 vs 限价费用预览</h3>
+      <details class="collapse">
+        <summary>市价 vs 限价费用对比</summary>
+        <div class="dbody">
           <div class="table-wrap">
             <table style="min-width:560px">
-              <thead>
-              <tr>
-                <th>结果</th>
-                <th>若按市价/Taker</th>
-                <th>若限价挂单/Maker</th>
-                <th>差额</th>
-              </tr>
-              </thead>
+              <thead><tr><th>结果</th><th>Taker</th><th>Maker</th><th>差额</th></tr></thead>
               <tbody id="feeCompare"></tbody>
             </table>
           </div>
         </div>
-
-        <div class="mini">
-          <h3>使用提示</h3>
-          <ul>
-            <li>市价单可能吃穿订单簿，先把平均成交价填进“买入价”。</li>
-            <li>完整一套有效成本 &gt; $1 时是锁亏对冲（确定地付出一个小额成本换方向风险）；&lt; $1 时对冲后每 $1 兑付还有净收益。</li>
-            <li>限价挂单未成交前不是完整对冲；只成交一边会留下方向性风险。</li>
-          </ul>
-        </div>
-      </div>
+      </details>
     </main>
   </section>
 
@@ -1632,6 +1678,19 @@ Polymarket Maker：fee/share = 0
       walk = walkBook(sortedA, fill);
       eatCount = walk.levelsHit;
     }
+    const ba = bestAskOf(book), bb = bestBidOf(book);
+    const askDepth = sortedA.reduce((s,x) => s + x.s, 0);
+    const summary = ba !== null
+      ? `<div class="booksum"><span>最佳 ask <b>${(ba*100).toFixed(2)}¢</b></span><span class="sub">深度 ${num(askDepth, 0)}</span></div>`
+      : `<div class="booksum"><span class="sub">无卖单</span></div>`;
+    let depthLine = "";
+    if(walk && walk.avg !== null){
+      const slip = (walk.avg - (ba || walk.avg));
+      const cls = walk.exhausted ? "bad" : (slip > 0.005 ? "bad" : "ok");
+      const slipTxt = Number.isFinite(slip) ? `滑点 +${(slip*100).toFixed(2)}¢` : "";
+      const exhaust = walk.exhausted ? "（深度不足）" : "";
+      depthLine = `<div class="depthline ${cls}">吃 ${walk.levelsHit} 档 · 均 ${(walk.avg*100).toFixed(2)}¢ · ${slipTxt}${exhaust}</div>`;
+    }
     const topAsks = sortedA.slice(0,5);
     const askDisplay = topAsks.slice().reverse();
     const askRows = askDisplay.length
@@ -1645,23 +1704,18 @@ Polymarket Maker：fee/share = 0
     const bidRows = topBids.length
       ? topBids.map(x => `<div class="bid">${(x.p*100).toFixed(2)}¢</div><div class="bid">${num(x.s,0)}</div>`).join("")
       : `<div class="empty" style="grid-column:1/-1;">无买单</div>`;
-    const ba = bestAskOf(book), bb = bestBidOf(book);
     const spread = (ba !== null && bb !== null) ? `价差 ${((ba-bb)*100).toFixed(2)}¢` : "—";
-    let depthLine = "";
-    if(walk && walk.avg !== null){
-      const slip = (walk.avg - (ba || walk.avg));
-      const cls = walk.exhausted ? "bad" : (slip > 0.005 ? "bad" : "ok");
-      const slipTxt = Number.isFinite(slip) ? `滑点 +${(slip*100).toFixed(2)}¢` : "";
-      const exhaust = walk.exhausted ? "（深度不足）" : "";
-      depthLine = `<div class="depthline ${cls}">吃 ${walk.levelsHit} 档 · 均 ${(walk.avg*100).toFixed(2)}¢ · ${slipTxt}${exhaust}</div>`;
-    }
     return `
       <div class="bookcard">
-        <h4><span>${escapeHtml(title)}</span><span class="muted-text">¢ / 份</span></h4>
-        <div class="rows"><div class="lbl">ask</div><div class="lbl">size</div>${askRows}</div>
+        <h4><span>${escapeHtml(title)}</span></h4>
+        ${summary}
         ${depthLine}
-        <div class="spread">${spread}</div>
-        <div class="rows"><div class="lbl">bid</div><div class="lbl">size</div>${bidRows}</div>
+        <details>
+          <summary>展开 5 档深度</summary>
+          <div class="rows"><div class="lbl">ask</div><div class="lbl">size</div>${askRows}</div>
+          <div class="spread">${spread}</div>
+          <div class="rows"><div class="lbl">bid</div><div class="lbl">size</div>${bidRows}</div>
+        </details>
       </div>
     `;
   }
