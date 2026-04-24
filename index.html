@@ -1047,18 +1047,41 @@ Polymarket Maker：fee/share = 0
     }catch(_){ return null; }
   }
 
+  const POLY_PROXIES = [
+    { label: "direct",     wrap: (u) => u },
+    { label: "corsproxy",  wrap: (u) => `https://corsproxy.io/?${encodeURIComponent(u)}` },
+    { label: "allorigins", wrap: (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` }
+  ];
+  let _polyIdx = 0;
+
+  async function fetchJsonPoly(url, opts){
+    const errors = [];
+    for(let k = 0; k < POLY_PROXIES.length; k++){
+      const idx = (_polyIdx + k) % POLY_PROXIES.length;
+      const target = POLY_PROXIES[idx].wrap(url);
+      try{
+        const r = await fetch(target, opts);
+        if(!r.ok){ errors.push(`${POLY_PROXIES[idx].label} HTTP ${r.status}`); continue; }
+        const data = await r.json();
+        _polyIdx = idx;
+        return { data, via: POLY_PROXIES[idx].label };
+      }catch(e){
+        const msg = e && e.message ? e.message : String(e);
+        errors.push(`${POLY_PROXIES[idx].label}: ${msg}`);
+      }
+    }
+    throw new Error(`所有抓取路径都失败 — ${errors.join(" | ")}`);
+  }
+
   async function fetchGammaEvent(slug){
-    const r = await fetch(`https://gamma-api.polymarket.com/events?slug=${encodeURIComponent(slug)}`, {cache:"no-store"});
-    if(!r.ok) throw new Error(`gamma HTTP ${r.status}`);
-    const arr = await r.json();
+    const { data: arr, via } = await fetchJsonPoly(`https://gamma-api.polymarket.com/events?slug=${encodeURIComponent(slug)}`, {cache:"no-store"});
     if(!Array.isArray(arr) || !arr.length) throw new Error("未找到该事件，检查 URL 是否正确");
-    return arr[0];
+    return { event: arr[0], via };
   }
 
   async function fetchClobBook(tokenId){
-    const r = await fetch(`https://clob.polymarket.com/book?token_id=${encodeURIComponent(tokenId)}`, {cache:"no-store"});
-    if(!r.ok) throw new Error(`clob HTTP ${r.status}`);
-    return r.json();
+    const { data, via } = await fetchJsonPoly(`https://clob.polymarket.com/book?token_id=${encodeURIComponent(tokenId)}`, {cache:"no-store"});
+    return { book: data, via };
   }
 
   function parseJsonField(s, fallback){
@@ -1140,10 +1163,11 @@ Polymarket Maker：fee/share = 0
     }
 
     try{
-      const ev = await fetchGammaEvent(parsed.slug);
+      const { event: ev, via: gammaVia } = await fetchGammaEvent(parsed.slug);
       if(mySeq !== _fetchSeq) return;
       const markets = (ev.markets || []).filter(m => m && !m.closed && m.active !== false);
       if(!markets.length) throw new Error("事件下没有活跃市场");
+      window.__lastFetchVia = gammaVia;
 
       let pickList = [];
       let kind;
@@ -1182,8 +1206,11 @@ Polymarket Maker：fee/share = 0
       if(mySeq !== _fetchSeq) return;
       status.className = "urlbox-status bad";
       const msg = err && err.message ? err.message : String(err);
-      const corsHint = /Failed to fetch|NetworkError/i.test(msg) ? "（可能是网络或 CORS 受限）" : "";
-      status.textContent = `抓取失败：${msg}${corsHint}`;
+      const allFailed = /所有抓取路径都失败/.test(msg);
+      const hint = allFailed
+        ? "。直连、corsproxy.io、allorigins.win 都不通——检查本机网络 / VPN / 浏览器隐私插件，或过几分钟代理恢复再试。"
+        : (/Failed to fetch|NetworkError/i.test(msg) ? "（可能是网络或浏览器插件拦截）" : "");
+      status.textContent = `抓取失败：${msg}${hint}`;
       books.hidden = true;
     }finally{
       if(mySeq === _fetchSeq){
@@ -1258,8 +1285,10 @@ Polymarket Maker：fee/share = 0
     const mB = _currentEvent.markets[_currentEvent.chosenB];
     if(!mA || !mB) throw new Error("outcome 未选择");
 
-    const [bookA, bookB] = await Promise.all([fetchClobBook(mA.token), fetchClobBook(mB.token)]);
+    const [resA, resB] = await Promise.all([fetchClobBook(mA.token), fetchClobBook(mB.token)]);
     if(mySeq !== _fetchSeq) return;
+    const bookA = resA.book, bookB = resB.book;
+    const clobVia = resB.via || resA.via;
     const askA = bestAskOf(bookA);
     const askB = bestAskOf(bookB);
 
@@ -1283,7 +1312,10 @@ Polymarket Maker：fee/share = 0
     const multiTip = _currentEvent.kind === "multi" && _currentEvent.markets.length > 2
       ? `（${_currentEvent.markets.length} 个 outcome，可在下方切换）`
       : "";
-    status.textContent = `${ts} · A ${askAs}，B ${askBs}${multiTip}。点刷新重取盘口。`;
+    const viaLabel = clobVia && clobVia !== "direct"
+      ? `（通过 ${clobVia === "corsproxy" ? "corsproxy.io" : "allorigins.win"} 公共代理转发）`
+      : "";
+    status.textContent = `${ts} · A ${askAs}，B ${askBs}${multiTip}${viaLabel}。点刷新重取盘口。`;
 
     books.hidden = false;
     books.innerHTML = renderBookCard(mA.name, bookA) + renderBookCard(mB.name, bookB);
