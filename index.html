@@ -79,7 +79,23 @@
     .stat .label{font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:600;}
     .stat .value{font-size:24px;font-weight:800;letter-spacing:-.02em;}
     .stat .sub{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5;}
-    .grid{display:grid;grid-template-columns:480px 1fr;gap:18px;align-items:start;}
+    .grid{display:flex;flex-direction:column;gap:16px;align-items:stretch;}
+    .grid > main.results{order:1;}
+    .grid > .platforms-grid{order:2;}
+    .grid > aside.inputs{order:3;}
+    .platforms-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    @media (max-width:900px){ .platforms-grid{grid-template-columns:1fr;} }
+    .platform-card{padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--panel-a);}
+    .platform-card .urlbox{margin:0;border:none;padding:0;background:transparent;}
+    .platform-card .urlbox-books{grid-template-columns:1fr 1fr;}
+    .platform-card .plat-head{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;margin-bottom:8px;}
+    .platform-card .plat-head .plat-badge{padding:2px 8px;border-radius:999px;font-size:10.5px;letter-spacing:.03em;}
+    .platform-card.plat-poly .plat-badge{background:rgba(16,185,129,.14);color:var(--good);}
+    .platform-card.plat-predict .plat-badge{background:rgba(124,58,237,.14);color:var(--accent);}
+    .platform-card .plat-fees{margin-top:10px;padding:8px 10px;border:1px dashed var(--line);border-radius:8px;font-size:12px;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-variant-numeric:tabular-nums;}
+    .platform-card .plat-fees.hide{display:none;}
+    .platform-card .plat-fees span{color:var(--muted);font-size:11px;}
+    .platform-card .plat-fees b{text-align:right;font-weight:700;}
     .legs-grid{margin-top:12px;}
     @media (min-width:981px){
       .legs-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:start;}
@@ -537,17 +553,6 @@
       <label for="bankroll">本金，USD</label>
       <input id="bankroll" type="number" step="0.01" min="0" value="1000" inputmode="decimal">
     </div>
-    <div class="size-cell size-shares hide">
-      <label for="targetShares">目标份额</label>
-      <input id="targetShares" type="number" step="1" min="0" value="200" inputmode="numeric">
-    </div>
-    <div class="size-cell">
-      <label for="sizeMode">规模模式</label>
-      <select id="sizeMode">
-        <option value="bankroll">按本金 USD</option>
-        <option value="shares">按固定份额</option>
-      </select>
-    </div>
     <div class="size-cell">
       <label for="roundShares">份额处理</label>
       <select id="roundShares">
@@ -578,38 +583,47 @@
   </div>
 
   <section class="grid">
+
+    <section class="platforms-grid" id="platformsRow">
+      <div class="platform-card plat-poly">
+        <div class="plat-head"><span class="plat-badge">Polymarket</span><span id="polyHeadTitle">Polymarket 抓盘</span></div>
+        <div class="urlbox">
+          <div class="urlbox-row">
+            <input id="marketUrl" type="url" placeholder="https://polymarket.com/event/..." autocomplete="off">
+            <button type="button" class="secondary" id="fetchUrlBtn">抓取</button>
+            <button type="button" class="secondary refresh-btn" id="refreshUrlBtn" disabled title="盘口在动——重新抓取当前链接" aria-label="刷新当前链接">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
+            </button>
+          </div>
+          <div id="urlStatus" class="urlbox-status">粘贴 Polymarket 事件链接 → 自动填 A/B 两侧 VWAP 价。</div>
+          <div id="marketPicker" class="market-picker hide"></div>
+          <div id="polyPairCandidates" class="pair-cands hide"></div>
+          <div id="urlBooks" class="urlbox-books" hidden></div>
+          <div id="polyFees" class="plat-fees hide"></div>
+        </div>
+      </div>
+
+      <div class="platform-card plat-predict">
+        <div class="plat-head"><span class="plat-badge">Predict.fun</span><span id="predictHeadTitle">Predict.fun 抓盘</span></div>
+        <div class="urlbox">
+          <div class="urlbox-row">
+            <input id="predictUrl" type="url" placeholder="https://predict.fun/market/..." autocomplete="off">
+            <button type="button" class="secondary" id="fetchPredictBtn">抓取</button>
+            <button type="button" class="secondary refresh-btn" id="refreshPredictBtn" disabled title="重新抓取当前 Predict 链接" aria-label="刷新 Predict 链接">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
+            </button>
+          </div>
+          <div id="predictStatus" class="urlbox-status">粘贴 Predict.fun 链接 → 选子市场 → 填入 A/B。</div>
+          <div id="predictMarketPicker" class="market-picker hide"></div>
+          <div id="predictPairCandidates" class="pair-cands hide"></div>
+          <div id="predictBooks" class="urlbox-books" hidden></div>
+          <div id="predictFees" class="plat-fees hide"></div>
+        </div>
+      </div>
+    </section>
+
     <aside class="inputs card">
       <h2>输入</h2>
-
-      <div class="urlbox">
-        <div class="urlbox-title"><span>Polymarket 抓盘</span></div>
-        <div class="urlbox-row">
-          <input id="marketUrl" type="url" placeholder="https://polymarket.com/event/..." autocomplete="off">
-          <button type="button" class="secondary" id="fetchUrlBtn">抓取</button>
-          <button type="button" class="secondary refresh-btn" id="refreshUrlBtn" disabled title="盘口在动——重新抓取当前链接" aria-label="刷新当前链接">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
-          </button>
-        </div>
-        <div id="urlStatus" class="urlbox-status">粘贴 Polymarket 事件链接 → 自动填 A/B 两侧 VWAP 价。</div>
-        <div id="marketPicker" class="market-picker hide"></div>
-        <div id="polyPairCandidates" class="pair-cands hide"></div>
-        <div id="urlBooks" class="urlbox-books" hidden></div>
-      </div>
-
-      <div class="urlbox">
-        <div class="urlbox-title"><span>Predict.fun 抓盘</span></div>
-        <div class="urlbox-row">
-          <input id="predictUrl" type="url" placeholder="https://predict.fun/market/..." autocomplete="off">
-          <button type="button" class="secondary" id="fetchPredictBtn">抓取</button>
-          <button type="button" class="secondary refresh-btn" id="refreshPredictBtn" disabled title="重新抓取当前 Predict 链接" aria-label="刷新 Predict 链接">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
-          </button>
-        </div>
-        <div id="predictStatus" class="urlbox-status">粘贴 Predict.fun 链接 → 选子市场 → 填入 A/B。</div>
-        <div id="predictMarketPicker" class="market-picker hide"></div>
-        <div id="predictPairCandidates" class="pair-cands hide"></div>
-        <div id="predictBooks" class="urlbox-books" hidden></div>
-      </div>
 
       <details class="collapse">
         <summary>预设组合</summary>
@@ -1000,7 +1014,7 @@
   };
 
   const ids = [
-    "bankroll","roundShares","sizeMode","targetShares","autoRefresh",
+    "bankroll","roundShares","autoRefresh",
     "nameA","priceA","platformA","orderA","polyCatA","polyRateA","customFeeA","customFeePerShareA",
     "nameB","priceB","platformB","orderB","polyCatB","polyRateB","customFeeB","customFeePerShareB",
     "predictBase","predictDiscount"
@@ -1010,7 +1024,6 @@
   const PERCENT_RANGE = {min:0, max:100};
   const NUMERIC_CONSTRAINTS = {
     bankroll:       {min:0},
-    targetShares:   {min:0},
     priceA:         PRICE_RANGE,
     priceB:         PRICE_RANGE,
     predictBase:    PERCENT_RANGE,
@@ -1558,6 +1571,50 @@ Polymarket Maker：fee/share = 0
     renderSideSource(side);
   }
 
+  // Estimate fees for buying YES + NO on one platform at VWAP for current size.
+  // Reuses feePerShareAt so predict/poly formulas stay single-source.
+  function renderPlatformFees(platform){
+    const elId = platform === "poly" ? "polyFees" : "predictFees";
+    const el = $(elId);
+    if(!el) return;
+    let yesBook, noBook, titleYes, titleNo;
+    if(platform === "poly"){
+      if(!_currentEvent || !_currentEvent.bookA || !_currentEvent.bookB){ el.classList.add("hide"); el.innerHTML = ""; return; }
+      yesBook = _currentEvent.bookA; noBook = _currentEvent.bookB;
+      titleYes = _currentEvent.markets[_currentEvent.chosenA]?.name || "A";
+      titleNo = _currentEvent.markets[_currentEvent.chosenB]?.name || "B";
+    } else {
+      if(!_currentPredict || !_currentPredict.yesBook){ el.classList.add("hide"); el.innerHTML = ""; return; }
+      yesBook = _currentPredict.yesBook; noBook = _currentPredict.noBook;
+      titleYes = _currentPredict.yesName || "Yes";
+      titleNo = _currentPredict.noName || "No";
+    }
+    const target = currentSizeTarget();
+    const walkY = walkBook(sortedAsks(yesBook), target);
+    const walkN = walkBook(sortedAsks(noBook), target);
+    const pY = walkY.avg, pN = walkN.avg;
+    // Use the platform's own fee formula via a synthetic "side" context.
+    // Temporarily read platform fees by calling feePerShareAt with a side that
+    // is configured to this platform — we synthesize by looking up base params.
+    const prevPlatA = $("platformA").value;
+    $("platformA").value = platform;
+    const feeY = pY !== null ? feePerShareAt("A", pY) : null;
+    const feeN = pN !== null ? feePerShareAt("A", pN) : null;
+    $("platformA").value = prevPlatA;
+    const sharesY = pY !== null && target.notional > 0 ? (target.notional / pY) : 0;
+    const sharesN = pN !== null && target.notional > 0 ? (target.notional / pN) : 0;
+    const totalFeeY = feeY !== null ? feeY * sharesY : null;
+    const totalFeeN = feeN !== null ? feeN * sharesN : null;
+    const label = platform === "poly" ? "Polymarket" : "Predict.fun";
+    el.classList.remove("hide");
+    el.innerHTML = `
+      <span>${escapeHtml(titleYes)} · VWAP</span><b>${pY !== null ? (pY*100).toFixed(2)+"¢" : "—"}</b>
+      <span>手续费 (${label} Taker)</span><b>${totalFeeY !== null ? money(totalFeeY,2) : "—"}</b>
+      <span>${escapeHtml(titleNo)} · VWAP</span><b>${pN !== null ? (pN*100).toFixed(2)+"¢" : "—"}</b>
+      <span>手续费 (${label} Taker)</span><b>${totalFeeN !== null ? money(totalFeeN,2) : "—"}</b>
+      <span>两侧手续费合计</span><b>${(totalFeeY !== null || totalFeeN !== null) ? money((totalFeeY||0)+(totalFeeN||0),2) : "—"}</b>`;
+  }
+
   function renderLegMoney(side, info){
     const el = $("legMoney"+side);
     if(!el) return;
@@ -1889,17 +1946,11 @@ Polymarket Maker：fee/share = 0
   }
 
   function currentSizeTarget(){
-    const mode = $("sizeMode") ? $("sizeMode").value : "bankroll";
-    if(mode === "shares"){
-      const n = readNum("targetShares");
-      return {shares: n > 0 ? n : Infinity, notional: Infinity, mode};
-    }
     const b = readNum("bankroll");
-    return {shares: Infinity, notional: b > 0 ? b/2 : Infinity, mode};
+    return {shares: Infinity, notional: b > 0 ? b/2 : Infinity, mode: "bankroll"};
   }
 
   function sizeLabel(t){
-    if(t.mode === "shares") return `份额 ${num(t.shares, 0)}`;
     return `$${num(t.notional, 0)}/边`;
   }
 
@@ -1994,12 +2045,9 @@ Polymarket Maker：fee/share = 0
         <h4><span>${escapeHtml(title)}</span></h4>
         ${summary}
         ${depthLine}
-        <details>
-          <summary>展开 5 档深度</summary>
-          <div class="rows"><div class="lbl">ask</div><div class="lbl">size</div>${askRows}</div>
-          <div class="spread">${spread}</div>
-          <div class="rows"><div class="lbl">bid</div><div class="lbl">size</div>${bidRows}</div>
-        </details>
+        <div class="rows"><div class="lbl">ask</div><div class="lbl">size</div>${askRows}</div>
+        <div class="spread">${spread}</div>
+        <div class="rows"><div class="lbl">bid</div><div class="lbl">size</div>${bidRows}</div>
       </div>
     `;
   }
@@ -2219,9 +2267,7 @@ Polymarket Maker：fee/share = 0
 
   function calculate(){
     ["A","B"].forEach(syncVisibility);
-    syncSizeModeVisibility();
 
-    const mode = $("sizeMode") ? $("sizeMode").value : "bankroll";
     const bankroll = readNum("bankroll");
     const pA = readNum("priceA")/100;
     const pB = readNum("priceB")/100;
@@ -2230,14 +2276,8 @@ Polymarket Maker：fee/share = 0
 
     let unitCost = pA + fpsA + pB + fpsB;
     const floored = $("roundShares").value === "floor";
-    let shares;
-    if(mode === "shares"){
-      const t = readNum("targetShares");
-      shares = floored ? Math.floor(t) : t;
-    } else {
-      const rawShares = unitCost > 0 ? bankroll / unitCost : 0;
-      shares = floored ? Math.floor(rawShares) : rawShares;
-    }
+    const rawShares = unitCost > 0 ? bankroll / unitCost : 0;
+    const shares = floored ? Math.floor(rawShares) : rawShares;
 
     const a = legData("A", shares);
     const b = legData("B", shares);
@@ -2246,7 +2286,7 @@ Polymarket Maker：fee/share = 0
     const payout = shares;
     const profit = payout - totalSpend;
     const roi = totalSpend > 0 ? profit / totalSpend : 0;
-    const leftover = (mode === "bankroll" && floored) ? Math.max(0, bankroll - totalSpend) : 0;
+    const leftover = floored ? Math.max(0, bankroll - totalSpend) : 0;
 
     const priceSum = pA + pB;
     const noFeeQ = priceSum > 0 ? bankroll / priceSum : 0;
@@ -2487,13 +2527,11 @@ Polymarket Maker：fee/share = 0
     renderSideBook("A"); renderSideBook("B");
     renderLegMoney("A", {spend: a.spend, shares, price: a.p});
     renderLegMoney("B", {spend: b.spend, shares, price: b.p});
+    renderPlatformFees("poly");
+    renderPlatformFees("predict");
   }
 
-  function syncSizeModeVisibility(){
-    const mode = $("sizeMode") ? $("sizeMode").value : "bankroll";
-    document.querySelectorAll(".size-bankroll").forEach(el => el.classList.toggle("hide", mode !== "bankroll"));
-    document.querySelectorAll(".size-shares").forEach(el => el.classList.toggle("hide", mode !== "shares"));
-  }
+  function syncSizeModeVisibility(){ /* removed: size mode toggle no longer in UI */ }
 
   function renderArbBanner({unitCost, roi, profit, shares, status}){
     const banner = $("arbBanner");
@@ -2742,11 +2780,8 @@ Polymarket Maker：fee/share = 0
   function reset(){
     $("bankroll").value = 1000;
     $("roundShares").value = "none";
-    $("sizeMode").value = "bankroll";
-    $("targetShares").value = 200;
     $("autoRefresh").checked = false;
     stopAutoRefresh();
-    syncSizeModeVisibility();
 
     $("nameA").value = "Ninjas in Pyjamas";
     $("priceA").value = 13;
@@ -2797,7 +2832,6 @@ Polymarket Maker：fee/share = 0
       else el.value = state[id];
     });
     ["A","B"].forEach(syncVisibility);
-    syncSizeModeVisibility();
   }
 
   function persistState(){
@@ -2941,7 +2975,6 @@ Polymarket Maker：fee/share = 0
       if(e.key === "Enter"){ e.preventDefault(); fetchAndFillFromUrl(); }
     });
 
-    $("sizeMode").addEventListener("change", syncSizeModeVisibility);
     $("autoRefresh").addEventListener("change", () => {
       if($("autoRefresh").checked) startAutoRefreshIfEnabled();
       else stopAutoRefresh();
