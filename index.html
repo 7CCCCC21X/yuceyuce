@@ -236,6 +236,9 @@
     .bookcard .spread{font-size:11px;color:var(--muted);text-align:center;margin:4px 0;padding:2px 0;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line);}
     .bookcard .empty{color:var(--muted);font-size:11px;text-align:center;padding:6px 0;}
     @media (max-width:480px){ .urlbox-books{grid-template-columns:1fr;} }
+    .predict-book-wrap{display:flex;flex-direction:column;gap:6px;}
+    .predict-fill{display:flex;gap:6px;}
+    .predict-fill button{flex:1;padding:6px 8px;font-size:12px;}
     .urlbox-row .refresh-btn{padding:10px 12px;display:inline-flex;align-items:center;justify-content:center;min-width:44px;}
     .urlbox-row .refresh-btn svg{width:15px;height:15px;}
     .urlbox-row .refresh-btn:disabled{opacity:.45;cursor:not-allowed;}
@@ -378,6 +381,22 @@
         <div id="urlStatus" class="urlbox-status">粘贴 polymarket.com/event/... 的链接，自动识别两边 outcome 并用 best ask 填入 A/B 价格。</div>
         <div id="marketPicker" class="market-picker hide"></div>
         <div id="urlBooks" class="urlbox-books" hidden></div>
+      </div>
+
+      <div class="urlbox">
+        <div class="urlbox-title">
+          <span>从 Predict.fun 链接抓盘</span>
+          <span class="datechip"><span class="dotmark"></span>Predict.fun</span>
+        </div>
+        <div class="urlbox-row">
+          <input id="predictUrl" type="url" placeholder="https://predict.fun/market/..." autocomplete="off">
+          <button type="button" class="secondary" id="fetchPredictBtn">抓取</button>
+          <button type="button" class="secondary refresh-btn" id="refreshPredictBtn" disabled title="重新抓取当前 Predict 链接" aria-label="刷新 Predict 链接">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
+          </button>
+        </div>
+        <div id="predictStatus" class="urlbox-status">粘贴 predict.fun/market/... 的链接，抓取订单簿并可一键填入 A/B 价格（与 Polymarket 对冲）。</div>
+        <div id="predictBooks" class="urlbox-books" hidden></div>
       </div>
 
       <div class="presets" role="group" aria-label="常用场景预设">
@@ -1095,6 +1114,239 @@ Polymarket Maker：fee/share = 0
     return { book: data, via };
   }
 
+  const PREDICT_API_BASE = (() => {
+    const h = location.hostname;
+    if(h.endsWith(".vercel.app") || h === "localhost" || h === "127.0.0.1" || h === ""){
+      return "/api/predict";
+    }
+    return `${VERCEL_API_ROOT}/api/predict`;
+  })();
+
+  async function fetchJsonPredict(query){
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), POLY_TIMEOUT_MS);
+    let r;
+    try{
+      r = await fetch(`${PREDICT_API_BASE}?${query}`, {cache:"no-store", signal: ctl.signal});
+    }catch(e){
+      clearTimeout(timer);
+      const msg = e && e.name === "AbortError" ? `Vercel API 超时 ${POLY_TIMEOUT_MS/1000}s` : (e && e.message ? e.message : String(e));
+      throw new Error(msg);
+    }
+    clearTimeout(timer);
+    const text = await r.text();
+    if(!r.ok){
+      let message = text;
+      try{ const p = JSON.parse(text); message = p.error || p.message || text; }catch(_){}
+      throw new Error(`Vercel API HTTP ${r.status}: ${message}`);
+    }
+    try{
+      return JSON.parse(text);
+    }catch(_){
+      throw new Error("Vercel API 返回的不是 JSON");
+    }
+  }
+
+  function parsePredictUrl(raw){
+    try{
+      const u = new URL(raw.trim());
+      if(!/(^|\.)predict\.fun$/.test(u.hostname)) return null;
+      const parts = u.pathname.split("/").filter(Boolean);
+      const i = parts.indexOf("market");
+      if(i < 0 || !parts[i+1]) return null;
+      return { slug: decodeURIComponent(parts[i+1]) };
+    }catch(_){ return null; }
+  }
+
+  function unwrapPredict(resp){
+    if(!resp || typeof resp !== "object") return resp;
+    if(resp.data && typeof resp.data === "object") return resp.data;
+    return resp;
+  }
+
+  function collectPredictMarkets(resp){
+    const out = [];
+    const src = unwrapPredict(resp);
+    const push = arr => { if(Array.isArray(arr)) for(const m of arr) if(m && typeof m === "object") out.push(m); };
+    push(resp && resp.markets);
+    push(src && src.markets);
+    if(src && Array.isArray(src.categories)){
+      for(const c of src.categories) push(c && c.markets);
+    }
+    if(Array.isArray(src)) push(src);
+    return out;
+  }
+
+  async function resolvePredictMarket(slug){
+    try{
+      const direct = await fetchJsonPredict(`type=market&id=${encodeURIComponent(slug)}`);
+      const m = unwrapPredict(direct);
+      if(m && (m.id != null || m.marketId != null)) return m;
+    }catch(_){}
+    const sr = await fetchJsonPredict(`type=search&q=${encodeURIComponent(slug)}`);
+    const markets = collectPredictMarkets(sr);
+    if(!markets.length) throw new Error("搜索没返回 Predict 市场，slug 可能不对");
+    const target = slug.toLowerCase();
+    const byExact = markets.find(m => (m.slug || "").toLowerCase() === target);
+    if(byExact) return byExact;
+    const byContains = markets.find(m => (m.slug || "").toLowerCase().includes(target));
+    if(byContains) return byContains;
+    return markets[0];
+  }
+
+  function normalizePredictBook(resp){
+    const src = unwrapPredict(resp) || {};
+    const norm = arr => (Array.isArray(arr) ? arr : []).map(x => {
+      if(Array.isArray(x)){
+        return { price: String(x[0]), size: String(x[1]) };
+      }
+      if(x && typeof x === "object"){
+        const price = x.price ?? x.p ?? x[0];
+        const size = x.quantity ?? x.size ?? x.qty ?? x.amount ?? x[1];
+        return { price: String(price), size: String(size) };
+      }
+      return { price: "NaN", size: "0" };
+    });
+    return { asks: norm(src.asks), bids: norm(src.bids) };
+  }
+
+  function synthesizeNoBook(yesBook){
+    const asks = (yesBook.bids || []).map(x => ({ price: String(1 - parseFloat(x.price)), size: x.size }));
+    const bids = (yesBook.asks || []).map(x => ({ price: String(1 - parseFloat(x.price)), size: x.size }));
+    return { asks, bids };
+  }
+
+  function predictOutcomeName(market, idx){
+    const os = market && market.outcomes;
+    if(Array.isArray(os) && os[idx]){
+      const o = os[idx];
+      if(typeof o === "string") return o;
+      if(o && typeof o === "object") return o.name || o.title || (idx === 0 ? "Yes" : "No");
+    }
+    return idx === 0 ? "Yes" : "No";
+  }
+
+  let _predictFetchSeq = 0;
+  let _currentPredict = null;
+
+  async function fetchAndFillFromPredictUrl(){
+    const urlInput = $("predictUrl");
+    const status = $("predictStatus");
+    const books = $("predictBooks");
+    const btn = $("fetchPredictBtn");
+    const refreshBtn = $("refreshPredictBtn");
+    const raw = urlInput.value.trim();
+    if(!raw){ status.className = "urlbox-status"; status.textContent = "请先粘贴链接。"; return; }
+    const parsed = parsePredictUrl(raw);
+    if(!parsed){
+      status.className = "urlbox-status bad";
+      status.textContent = "无法识别链接。目前只支持 predict.fun/.../market/... 形式。";
+      return;
+    }
+    const isRefresh = !!(_currentPredict && _currentPredict.slug === parsed.slug);
+    const mySeq = ++_predictFetchSeq;
+    btn.disabled = true;
+    btn.textContent = isRefresh ? "刷新中…" : "抓取中…";
+    if(refreshBtn){ refreshBtn.disabled = true; refreshBtn.classList.add("spinning"); }
+    status.className = "urlbox-status loading";
+    status.textContent = isRefresh ? `刷新 Predict ${parsed.slug} 盘口 …` : `查询 Predict 市场 ${parsed.slug} …`;
+    if(!isRefresh){
+      books.hidden = true;
+      books.innerHTML = "";
+    }
+
+    try{
+      const market = await resolvePredictMarket(parsed.slug);
+      if(mySeq !== _predictFetchSeq) return;
+      const marketId = market.id ?? market.marketId;
+      if(marketId == null) throw new Error("Predict 市场没有 id 字段");
+      const bookResp = await fetchJsonPredict(`type=book&market_id=${encodeURIComponent(marketId)}`);
+      if(mySeq !== _predictFetchSeq) return;
+      const yesBook = normalizePredictBook(bookResp);
+      const noBook = synthesizeNoBook(yesBook);
+      const yesName = predictOutcomeName(market, 0);
+      const noName = predictOutcomeName(market, 1);
+      const title = market.title || market.question || parsed.slug;
+      _currentPredict = { slug: parsed.slug, market, marketId, yesName, noName, yesBook, noBook, title };
+
+      const fillBtns = side => `
+        <div class="predict-fill">
+          <button type="button" class="secondary" data-pf-side="${side}" data-pf-target="A">填入 A</button>
+          <button type="button" class="secondary" data-pf-side="${side}" data-pf-target="B">填入 B</button>
+        </div>`;
+      books.hidden = false;
+      books.innerHTML = `
+        <div class="predict-book-wrap">
+          ${renderBookCard(`${yesName}（Predict · Yes 侧）`, yesBook)}
+          ${fillBtns("yes")}
+        </div>
+        <div class="predict-book-wrap">
+          ${renderBookCard(`${noName}（Predict · No 合成 = 1 − Yes）`, noBook)}
+          ${fillBtns("no")}
+        </div>`;
+      books.querySelectorAll("[data-pf-side][data-pf-target]").forEach(b => {
+        b.addEventListener("click", onPredictFillClick);
+      });
+
+      const ba = bestAskOf(yesBook), bb = bestBidOf(yesBook);
+      const askY = ba !== null ? `${(ba*100).toFixed(2)}¢` : "—";
+      const askN = bb !== null ? `${((1-bb)*100).toFixed(2)}¢` : "—";
+      const ts = new Date().toLocaleTimeString([], {hour12:false});
+      status.className = "urlbox-status ok";
+      status.textContent = `${ts} · ${title} · 买 ${yesName} ${askY}，买 ${noName} ${askN}（点"填入 A/B"写到左侧）。`;
+    }catch(err){
+      if(mySeq !== _predictFetchSeq) return;
+      status.className = "urlbox-status bad";
+      const msg = err && err.message ? err.message : String(err);
+      const hint = /401|403|api.?key/i.test(msg)
+        ? "（Vercel 需要配置 PREDICT_API_KEY 主网环境变量）"
+        : "";
+      status.textContent = `抓取失败：${msg}${hint}`;
+      books.hidden = true;
+    }finally{
+      if(mySeq === _predictFetchSeq){
+        btn.disabled = false;
+        btn.textContent = "抓取";
+        if(refreshBtn){
+          refreshBtn.classList.remove("spinning");
+          refreshBtn.disabled = !_currentPredict;
+        }
+      }
+    }
+  }
+
+  function onPredictFillClick(ev){
+    if(!_currentPredict) return;
+    const btn = ev.currentTarget;
+    const side = btn.getAttribute("data-pf-side");
+    const target = btn.getAttribute("data-pf-target");
+    let price, name;
+    if(side === "yes"){
+      const ba = bestAskOf(_currentPredict.yesBook);
+      price = ba !== null ? ba : null;
+      name = `${_currentPredict.title} · ${_currentPredict.yesName}`;
+    }else{
+      const bb = bestBidOf(_currentPredict.yesBook);
+      price = bb !== null ? (1 - bb) : null;
+      name = `${_currentPredict.title} · ${_currentPredict.noName}`;
+    }
+    const status = $("predictStatus");
+    if(price == null){
+      status.className = "urlbox-status bad";
+      status.textContent = "该侧盘口没有可用价格，无法填入。";
+      return;
+    }
+    $("name"+target).value = name;
+    $("platform"+target).value = "predict";
+    $("price"+target).value = (price * 100).toFixed(2);
+    syncVisibility(target);
+    collapseHeroOnce();
+    calculate();
+    persistState();
+    status.className = "urlbox-status ok";
+    status.textContent = `已填入 ${target}：${name} @ ${(price*100).toFixed(2)}¢`;
+  }
+
   function parseJsonField(s, fallback){
     if(s == null) return fallback;
     if(typeof s !== "string") return s;
@@ -1802,6 +2054,12 @@ Polymarket Maker：fee/share = 0
     $("refreshUrlBtn").addEventListener("click", fetchAndFillFromUrl);
     $("marketUrl").addEventListener("keydown", (e) => {
       if(e.key === "Enter"){ e.preventDefault(); fetchAndFillFromUrl(); }
+    });
+
+    $("fetchPredictBtn").addEventListener("click", fetchAndFillFromPredictUrl);
+    $("refreshPredictBtn").addEventListener("click", fetchAndFillFromPredictUrl);
+    $("predictUrl").addEventListener("keydown", (e) => {
+      if(e.key === "Enter"){ e.preventDefault(); fetchAndFillFromPredictUrl(); }
     });
 
     ["pfA","pfB"].forEach(id => {
