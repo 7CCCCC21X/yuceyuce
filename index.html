@@ -414,6 +414,24 @@
     .explain h3{font-weight:600;}
     .note{background:transparent;border-left:3px solid var(--warn);padding:8px 12px;border-radius:0 8px 8px 0;}
     .note b{color:var(--warn);}
+
+    /* Top-of-page bankroll / size bar */
+    .size-bar{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px;padding:10px 12px;margin:0 0 12px;border:1px solid var(--line);border-radius:12px;background:transparent;}
+    .size-bar .size-cell{display:flex;flex-direction:column;gap:4px;}
+    .size-bar label{font-size:11px;color:var(--muted);font-weight:600;margin:0;}
+    .size-bar input,.size-bar select{padding:8px 10px;font-size:13px;}
+    .size-bar .size-bankroll input,.size-bar .size-shares input{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;}
+    @media (max-width:700px){ .size-bar{grid-template-columns:1fr 1fr;} }
+
+    /* Drop inputs card H2 since sections are labeled already */
+    .inputs > h2{display:none;}
+
+    /* Leg cards — A=紫色 accent, B=绿色 accent */
+    .leg.leg-a{border-top:2px solid var(--accent);}
+    .leg.leg-b{border-top:2px solid var(--good);}
+    .leg.leg-a .leg-title h3{color:var(--accent);}
+    .leg.leg-b .leg-title h3{color:var(--good);}
+    .leg-title h3{font-size:13px;letter-spacing:.02em;font-weight:700;}
   </style>
 </head>
 <body>
@@ -455,6 +473,31 @@
     </details>
   </section>
 
+  <div class="size-bar">
+    <div class="size-cell size-bankroll">
+      <label for="bankroll">本金，USD</label>
+      <input id="bankroll" type="number" step="0.01" min="0" value="1000" inputmode="decimal">
+    </div>
+    <div class="size-cell size-shares hide">
+      <label for="targetShares">目标份额</label>
+      <input id="targetShares" type="number" step="1" min="0" value="200" inputmode="numeric">
+    </div>
+    <div class="size-cell">
+      <label for="sizeMode">规模模式</label>
+      <select id="sizeMode">
+        <option value="bankroll">按本金 USD</option>
+        <option value="shares">按固定份额</option>
+      </select>
+    </div>
+    <div class="size-cell">
+      <label for="roundShares">份额处理</label>
+      <select id="roundShares">
+        <option value="none">允许小数份额</option>
+        <option value="floor">向下取整</option>
+      </select>
+    </div>
+  </div>
+
   <div id="arbBanner" class="arb-banner hide" aria-live="polite">
     <div class="arb-group"><span class="arb-lbl">成本</span><span class="arb-val" id="arbUnit">—</span></div>
     <div class="arb-group"><span class="arb-lbl">ROI</span><span class="arb-val" id="arbRoi">—</span></div>
@@ -480,10 +523,7 @@
       <h2>输入</h2>
 
       <div class="urlbox">
-        <div class="urlbox-title">
-          <span>从 Polymarket 链接自动抓盘</span>
-          <span class="datechip"><span class="dotmark"></span>仅支持 Polymarket</span>
-        </div>
+        <div class="urlbox-title"><span>Polymarket 抓盘</span></div>
         <div class="urlbox-row">
           <input id="marketUrl" type="url" placeholder="https://polymarket.com/event/..." autocomplete="off">
           <button type="button" class="secondary" id="fetchUrlBtn">抓取</button>
@@ -491,16 +531,13 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
           </button>
         </div>
-        <div id="urlStatus" class="urlbox-status">粘贴 polymarket.com/event/... 的链接，自动识别两边 outcome 并用 best ask 填入 A/B 价格。</div>
+        <div id="urlStatus" class="urlbox-status">粘贴 Polymarket 事件链接 → 自动填 A/B 两侧 VWAP 价。</div>
         <div id="marketPicker" class="market-picker hide"></div>
         <div id="urlBooks" class="urlbox-books" hidden></div>
       </div>
 
       <div class="urlbox">
-        <div class="urlbox-title">
-          <span>从 Predict.fun 链接抓盘</span>
-          <span class="datechip"><span class="dotmark"></span>Predict.fun</span>
-        </div>
+        <div class="urlbox-title"><span>Predict.fun 抓盘</span></div>
         <div class="urlbox-row">
           <input id="predictUrl" type="url" placeholder="https://predict.fun/market/..." autocomplete="off">
           <button type="button" class="secondary" id="fetchPredictBtn">抓取</button>
@@ -508,7 +545,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
           </button>
         </div>
-        <div id="predictStatus" class="urlbox-status">粘贴 predict.fun/market/... 的链接，抓取订单簿并可一键填入 A/B 价格（与 Polymarket 对冲）。</div>
+        <div id="predictStatus" class="urlbox-status">粘贴 Predict.fun 链接 → 选子市场 → 填入 A/B。</div>
         <div id="predictMarketPicker" class="market-picker hide"></div>
         <div id="predictBooks" class="urlbox-books" hidden></div>
       </div>
@@ -526,40 +563,9 @@
         </div>
       </details>
 
-      <div class="row">
-        <div>
-          <label for="sizeMode">规模模式</label>
-          <small class="hint">决定 VWAP 按本金吃还是按份额吃。</small>
-          <select id="sizeMode">
-            <option value="bankroll">按本金 USD</option>
-            <option value="shares">按固定份额</option>
-          </select>
-        </div>
-        <div>
-          <label for="roundShares">份额处理</label>
-          <small class="hint">整数更接近实际下单。</small>
-          <select id="roundShares">
-            <option value="none">允许小数份额</option>
-            <option value="floor">向下取整</option>
-          </select>
-        </div>
-      </div>
-      <div class="row">
-        <div class="size-bankroll">
-          <label for="bankroll">本金，USDT/USDC</label>
-          <small class="hint">两边总花费上限；VWAP 按各边 ≈ 本金/2 吃。</small>
-          <input id="bankroll" type="number" step="0.01" min="0" value="1000" inputmode="decimal">
-        </div>
-        <div class="size-shares hide">
-          <label for="targetShares">目标份额，N</label>
-          <small class="hint">两边各买 N 份 Yes/No 对冲。</small>
-          <input id="targetShares" type="number" step="1" min="0" value="200" inputmode="numeric">
-        </div>
-      </div>
-
       <div class="legs-grid">
-      <div class="leg">
-        <div class="leg-title"><h3>A 结果</h3><span class="pill">例：NIP</span></div>
+      <div class="leg leg-a">
+        <div class="leg-title"><h3>A 结果</h3></div>
 
         <div class="row">
           <div>
@@ -568,7 +574,6 @@
           </div>
           <div>
             <label for="priceA">买入价，¢</label>
-            <small class="hint">0–100；Shift+点按步进 0.1。</small>
             <div class="stepper">
               <button type="button" class="stepper-btn" data-for="priceA" data-step="-1" aria-label="A 价格减 1¢">−</button>
               <input id="priceA" type="number" step="0.01" min="0" max="100" value="13" inputmode="decimal">
@@ -588,7 +593,6 @@
           </div>
           <div>
             <label for="orderA">订单</label>
-            <small class="hint">市价按 Taker 费，挂单按 Maker。</small>
             <select id="orderA">
               <option value="taker">市价 / 立即成交（Taker）</option>
               <option value="maker">限价挂单 / 等别人吃单（Maker）</option>
@@ -627,8 +631,8 @@
         </button>
       </div>
 
-      <div class="leg">
-        <div class="leg-title"><h3>B 结果</h3><span class="pill">例：BLG</span></div>
+      <div class="leg leg-b">
+        <div class="leg-title"><h3>B 结果</h3></div>
 
         <div class="row">
           <div>
@@ -637,7 +641,6 @@
           </div>
           <div>
             <label for="priceB">买入价，¢</label>
-            <small class="hint">0–100；Shift+点按步进 0.1。</small>
             <div class="stepper">
               <button type="button" class="stepper-btn" data-for="priceB" data-step="-1" aria-label="B 价格减 1¢">−</button>
               <input id="priceB" type="number" step="0.01" min="0" max="100" value="88" inputmode="decimal">
@@ -657,7 +660,6 @@
           </div>
           <div>
             <label for="orderB">订单</label>
-            <small class="hint">市价按 Taker 费，挂单按 Maker。</small>
             <select id="orderB">
               <option value="taker">市价 / 立即成交（Taker）</option>
               <option value="maker">限价挂单 / 等别人吃单（Maker）</option>
