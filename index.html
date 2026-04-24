@@ -236,6 +236,34 @@
     .bookcard .spread{font-size:11px;color:var(--muted);text-align:center;margin:4px 0;padding:2px 0;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line);}
     .bookcard .empty{color:var(--muted);font-size:11px;text-align:center;padding:6px 0;}
     @media (max-width:480px){ .urlbox-books{grid-template-columns:1fr;} }
+    .urlbox-row .refresh-btn{padding:10px 12px;display:inline-flex;align-items:center;justify-content:center;min-width:44px;}
+    .urlbox-row .refresh-btn svg{width:15px;height:15px;}
+    .urlbox-row .refresh-btn:disabled{opacity:.45;cursor:not-allowed;}
+    .urlbox-row .refresh-btn.spinning svg{animation:spin 1s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .market-picker{margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:12px;background:rgba(2,6,23,.18);display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    :root[data-theme="light"] .market-picker{background:rgba(255,255,255,.6);}
+    .market-picker.hide{display:none;}
+    .market-picker .mp-row{display:flex;flex-direction:column;gap:4px;}
+    .market-picker .mp-row label{font-size:11px;color:var(--sub);font-weight:700;margin:0;}
+    .market-picker .mp-row select{font-size:12px;padding:8px 10px;}
+    @media (max-width:480px){ .market-picker{grid-template-columns:1fr;} }
+    .pf-sliders{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0;}
+    .pf-slider label{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--sub);font-weight:600;margin-bottom:6px;}
+    .pf-slider label .pct{color:var(--accent);font-weight:800;font-variant-numeric:tabular-nums;}
+    .pf-slider input[type="range"]{width:100%;accent-color:var(--accent);}
+    .pf-scenarios{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;}
+    .pf-scenario{padding:10px;border-radius:12px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(124,58,237,.05),rgba(2,6,23,.12));}
+    :root[data-theme="light"] .pf-scenario{background:linear-gradient(180deg,rgba(124,58,237,.03),rgba(255,255,255,.7));}
+    .pf-scenario.good{border-color:rgba(16,185,129,.4);background:linear-gradient(180deg,rgba(16,185,129,.10),rgba(2,6,23,.12));}
+    .pf-scenario.bad{border-color:rgba(239,68,68,.4);background:linear-gradient(180deg,rgba(239,68,68,.09),rgba(2,6,23,.12));}
+    .pf-scenario .k{font-size:11px;color:var(--sub);margin-bottom:4px;font-weight:700;}
+    .pf-scenario .v{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+    .pf-summary{margin-top:10px;font-size:12px;color:var(--sub);padding:8px 10px;border:1px dashed var(--line);border-radius:10px;line-height:1.5;}
+    @media (max-width:620px){
+      .pf-sliders{grid-template-columns:1fr;}
+      .pf-scenarios{grid-template-columns:1fr;}
+    }
     .playbook{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:8px;}
     .playbook li{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,rgba(124,58,237,.05),rgba(2,6,23,.14));}
     :root[data-theme="light"] .playbook li{background:linear-gradient(180deg,rgba(124,58,237,.03),rgba(255,255,255,.7));}
@@ -343,8 +371,12 @@
         <div class="urlbox-row">
           <input id="marketUrl" type="url" placeholder="https://polymarket.com/event/..." autocomplete="off">
           <button type="button" class="secondary" id="fetchUrlBtn">抓取</button>
+          <button type="button" class="secondary refresh-btn" id="refreshUrlBtn" disabled title="盘口在动——重新抓取当前链接" aria-label="刷新当前链接">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
+          </button>
         </div>
         <div id="urlStatus" class="urlbox-status">粘贴 polymarket.com/event/... 的链接，自动识别两边 outcome 并用 best ask 填入 A/B 价格。</div>
+        <div id="marketPicker" class="market-picker hide"></div>
         <div id="urlBooks" class="urlbox-books" hidden></div>
       </div>
 
@@ -624,6 +656,27 @@
         <h3>执行方案 <span class="pill" style="margin-left:6px;font-weight:600;">Playbook</span></h3>
         <p style="font-size:12px;margin-bottom:4px;">按当前价格推荐的下单顺序与最高限价。仅供参考，不构成投资建议。</p>
         <ol class="playbook" id="playbook"></ol>
+      </div>
+
+      <div class="mini" style="margin-top:14px;">
+        <h3>部分成交模拟 <span class="pill" style="margin-left:6px;font-weight:600;">Partial Fill</span></h3>
+        <p style="font-size:12px;margin-bottom:4px;">调整两边成交比例，看只成交一部分时的真实盈亏和方向暴露。对冲最容易踩的坑就是单边没挂上。</p>
+        <div class="pf-sliders">
+          <div class="pf-slider">
+            <label for="pfA"><span>A 成交比例</span><span class="pct" id="pfAPct">100%</span></label>
+            <input type="range" id="pfA" min="0" max="100" value="100" step="1">
+          </div>
+          <div class="pf-slider">
+            <label for="pfB"><span>B 成交比例</span><span class="pct" id="pfBPct">100%</span></label>
+            <input type="range" id="pfB" min="0" max="100" value="100" step="1">
+          </div>
+        </div>
+        <div class="pf-scenarios">
+          <div class="pf-scenario"><div class="k" id="pfKA">若 A 赢</div><div class="v" id="pfProfitA">—</div></div>
+          <div class="pf-scenario"><div class="k" id="pfKB">若 B 赢</div><div class="v" id="pfProfitB">—</div></div>
+          <div class="pf-scenario"><div class="k">若两边都没赢（罕见）</div><div class="v" id="pfProfitNone">—</div></div>
+        </div>
+        <div class="pf-summary" id="pfSummary">—</div>
       </div>
 
       <div class="note" id="warningBox">—</div>
@@ -1054,11 +1107,15 @@ Polymarket Maker：fee/share = 0
   }
 
   let _fetchSeq = 0;
+  let _currentEvent = null;
+
   async function fetchAndFillFromUrl(){
     const urlInput = $("marketUrl");
     const status = $("urlStatus");
     const books = $("urlBooks");
     const btn = $("fetchUrlBtn");
+    const refreshBtn = $("refreshUrlBtn");
+    const picker = $("marketPicker");
     const raw = urlInput.value.trim();
     if(!raw){ status.className = "urlbox-status"; status.textContent = "请先粘贴链接。"; return; }
 
@@ -1069,13 +1126,18 @@ Polymarket Maker：fee/share = 0
       return;
     }
 
+    const isRefresh = !!(_currentEvent && _currentEvent.slug === parsed.slug);
     const mySeq = ++_fetchSeq;
     btn.disabled = true;
-    btn.textContent = "抓取中…";
+    btn.textContent = isRefresh ? "刷新中…" : "抓取中…";
+    if(refreshBtn){ refreshBtn.disabled = true; refreshBtn.classList.add("spinning"); }
     status.className = "urlbox-status loading";
-    status.textContent = `查询事件 ${parsed.slug} …`;
-    books.hidden = true;
-    books.innerHTML = "";
+    status.textContent = isRefresh ? `刷新 ${parsed.slug} 盘口 …` : `查询事件 ${parsed.slug} …`;
+    if(!isRefresh){
+      books.hidden = true;
+      books.innerHTML = "";
+      if(picker) picker.classList.add("hide");
+    }
 
     try{
       const ev = await fetchGammaEvent(parsed.slug);
@@ -1083,55 +1145,39 @@ Polymarket Maker：fee/share = 0
       const markets = (ev.markets || []).filter(m => m && !m.closed && m.active !== false);
       if(!markets.length) throw new Error("事件下没有活跃市场");
 
-      let labelA, labelB, tokenA, tokenB, scenario;
+      let pickList = [];
+      let kind;
       if(markets.length === 1){
         const m = markets[0];
         const tokens = parseJsonField(m.clobTokenIds, []);
         const outcomes = parseJsonField(m.outcomes, ["Yes","No"]);
         if(!Array.isArray(tokens) || tokens.length < 2) throw new Error("市场缺少 token id");
-        labelA = `${m.question || ev.title || "Market"} · ${outcomes[0] || "Yes"}`;
-        labelB = `${m.question || ev.title || "Market"} · ${outcomes[1] || "No"}`;
-        tokenA = tokens[0]; tokenB = tokens[1];
-        scenario = "binary";
+        pickList = [
+          { name: `${m.question || ev.title || "Market"} · ${outcomes[0] || "Yes"}`, token: tokens[0] },
+          { name: `${m.question || ev.title || "Market"} · ${outcomes[1] || "No"}`, token: tokens[1] }
+        ];
+        kind = "binary";
       }else{
-        const m1 = markets[0], m2 = markets[1];
-        const t1 = parseJsonField(m1.clobTokenIds, []);
-        const t2 = parseJsonField(m2.clobTokenIds, []);
-        if(!t1[0] || !t2[0]) throw new Error("市场缺少 token id");
-        labelA = m1.groupItemTitle || m1.question || "Market A";
-        labelB = m2.groupItemTitle || m2.question || "Market B";
-        tokenA = t1[0]; tokenB = t2[0];
-        scenario = "multi";
+        pickList = markets.map(m => {
+          const t = parseJsonField(m.clobTokenIds, []);
+          return { name: m.groupItemTitle || m.question || "Market", token: t[0] || null };
+        }).filter(x => x.token);
+        if(pickList.length < 2) throw new Error("可用 outcome 不足 2 个");
+        kind = "multi";
       }
 
-      const [bookA, bookB] = await Promise.all([fetchClobBook(tokenA), fetchClobBook(tokenB)]);
-      if(mySeq !== _fetchSeq) return;
-      const askA = bestAskOf(bookA);
-      const askB = bestAskOf(bookB);
+      const prev = _currentEvent;
+      const chosenA = (isRefresh && prev && prev.chosenA < pickList.length) ? prev.chosenA : 0;
+      const chosenB = (isRefresh && prev && prev.chosenB < pickList.length && prev.chosenB !== chosenA) ? prev.chosenB : 1;
+      _currentEvent = { slug: parsed.slug, title: ev.title || parsed.slug, kind, markets: pickList, chosenA, chosenB };
 
-      $("nameA").value = labelA;
-      $("platformA").value = "poly";
-      if(askA !== null) $("priceA").value = (askA*100).toFixed(2);
+      if(kind === "multi" && pickList.length > 2 && picker){
+        renderMarketPicker();
+      }else if(picker){
+        picker.classList.add("hide");
+      }
 
-      $("nameB").value = labelB;
-      $("platformB").value = "poly";
-      if(askB !== null) $("priceB").value = (askB*100).toFixed(2);
-
-      ["A","B"].forEach(syncVisibility);
-      collapseHeroOnce();
-      calculate();
-      persistState();
-
-      status.className = "urlbox-status ok";
-      const askAs = askA !== null ? `${(askA*100).toFixed(2)}¢` : "—";
-      const askBs = askB !== null ? `${(askB*100).toFixed(2)}¢` : "—";
-      const scenarioText = scenario === "multi"
-        ? `这是多选事件（${markets.length} 个 outcome），默认取前两个。如需别的 outcome 请手动改 A/B。`
-        : "已用 best ask 填入 A/B。";
-      status.textContent = `已抓取：A ${askAs}，B ${askBs}。${scenarioText}`;
-
-      books.hidden = false;
-      books.innerHTML = renderBookCard(labelA, bookA) + renderBookCard(labelB, bookB);
+      await applySelectedOutcomes(mySeq);
     }catch(err){
       if(mySeq !== _fetchSeq) return;
       status.className = "urlbox-status bad";
@@ -1143,8 +1189,104 @@ Polymarket Maker：fee/share = 0
       if(mySeq === _fetchSeq){
         btn.disabled = false;
         btn.textContent = "抓取";
+        if(refreshBtn){
+          refreshBtn.classList.remove("spinning");
+          refreshBtn.disabled = !_currentEvent;
+        }
       }
     }
+  }
+
+  function renderMarketPicker(){
+    const picker = $("marketPicker");
+    if(!picker || !_currentEvent) return;
+    const opts = _currentEvent.markets.map((m,i) => `<option value="${i}">${escapeHtml(m.name)}</option>`).join("");
+    picker.innerHTML = `
+      <div class="mp-row">
+        <label for="pickA">A 用 outcome（${_currentEvent.markets.length} 选 1）</label>
+        <select id="pickA">${opts}</select>
+      </div>
+      <div class="mp-row">
+        <label for="pickB">B 用 outcome</label>
+        <select id="pickB">${opts}</select>
+      </div>
+    `;
+    $("pickA").value = _currentEvent.chosenA;
+    $("pickB").value = _currentEvent.chosenB;
+    $("pickA").addEventListener("change", onPickerChange);
+    $("pickB").addEventListener("change", onPickerChange);
+    picker.classList.remove("hide");
+  }
+
+  async function onPickerChange(){
+    if(!_currentEvent) return;
+    const status = $("urlStatus");
+    const a = parseInt($("pickA").value, 10);
+    const b = parseInt($("pickB").value, 10);
+    if(a === b){
+      status.className = "urlbox-status bad";
+      status.textContent = "A 和 B 不能选同一个 outcome，请换一个。";
+      return;
+    }
+    _currentEvent.chosenA = a;
+    _currentEvent.chosenB = b;
+    const mySeq = ++_fetchSeq;
+    const refreshBtn = $("refreshUrlBtn");
+    if(refreshBtn){ refreshBtn.disabled = true; refreshBtn.classList.add("spinning"); }
+    status.className = "urlbox-status loading";
+    status.textContent = "切换 outcome，重取盘口…";
+    try{
+      await applySelectedOutcomes(mySeq);
+    }catch(err){
+      if(mySeq !== _fetchSeq) return;
+      status.className = "urlbox-status bad";
+      const msg = err && err.message ? err.message : String(err);
+      status.textContent = `切换失败：${msg}`;
+    }finally{
+      if(refreshBtn){
+        refreshBtn.classList.remove("spinning");
+        refreshBtn.disabled = !_currentEvent;
+      }
+    }
+  }
+
+  async function applySelectedOutcomes(mySeq){
+    if(!_currentEvent) return;
+    const status = $("urlStatus");
+    const books = $("urlBooks");
+    const mA = _currentEvent.markets[_currentEvent.chosenA];
+    const mB = _currentEvent.markets[_currentEvent.chosenB];
+    if(!mA || !mB) throw new Error("outcome 未选择");
+
+    const [bookA, bookB] = await Promise.all([fetchClobBook(mA.token), fetchClobBook(mB.token)]);
+    if(mySeq !== _fetchSeq) return;
+    const askA = bestAskOf(bookA);
+    const askB = bestAskOf(bookB);
+
+    $("nameA").value = mA.name;
+    $("platformA").value = "poly";
+    if(askA !== null) $("priceA").value = (askA*100).toFixed(2);
+
+    $("nameB").value = mB.name;
+    $("platformB").value = "poly";
+    if(askB !== null) $("priceB").value = (askB*100).toFixed(2);
+
+    ["A","B"].forEach(syncVisibility);
+    collapseHeroOnce();
+    calculate();
+    persistState();
+
+    status.className = "urlbox-status ok";
+    const askAs = askA !== null ? `${(askA*100).toFixed(2)}¢` : "—";
+    const askBs = askB !== null ? `${(askB*100).toFixed(2)}¢` : "—";
+    const ts = new Date().toLocaleTimeString([], {hour12:false});
+    const multiTip = _currentEvent.kind === "multi" && _currentEvent.markets.length > 2
+      ? `（${_currentEvent.markets.length} 个 outcome，可在下方切换）`
+      : "";
+    status.textContent = `${ts} · A ${askAs}，B ${askBs}${multiTip}。点刷新重取盘口。`;
+
+    books.hidden = false;
+    books.innerHTML = renderBookCard(mA.name, bookA) + renderBookCard(mB.name, bookB);
   }
 
   function calculate(){
@@ -1373,6 +1515,55 @@ Polymarket Maker：fee/share = 0
       ``,
       `任一赛果兑付 ${money(payout,2)} · 总花费 ${money(totalSpend,2)}`
     ].join("\n");
+
+    _lastResult = {a, b, shares};
+    renderPartialFill();
+  }
+
+  let _lastResult = null;
+  function renderPartialFill(){
+    if(!_lastResult) return;
+    const {a, b, shares} = _lastResult;
+    const pfA = parseFloat($("pfA").value) / 100;
+    const pfB = parseFloat($("pfB").value) / 100;
+    $("pfAPct").textContent = `${Math.round(pfA*100)}%`;
+    $("pfBPct").textContent = `${Math.round(pfB*100)}%`;
+    $("pfKA").textContent = `若 ${escapeHtml(a.name || "A")} 赢`;
+    $("pfKB").textContent = `若 ${escapeHtml(b.name || "B")} 赢`;
+
+    const sharesA = shares * pfA;
+    const sharesB = shares * pfB;
+    const spendA = sharesA * (a.p + a.fps);
+    const spendB = sharesB * (b.p + b.fps);
+    const totalSpend = spendA + spendB;
+
+    const profitIfA = sharesA - totalSpend;
+    const profitIfB = sharesB - totalSpend;
+    const profitIfNone = -totalSpend;
+
+    const setScenario = (id, value, neutral=false) => {
+      const valEl = $(id);
+      const card = valEl.closest(".pf-scenario");
+      const cls = neutral ? "" : (value >= 0 ? "good" : "bad");
+      if(card) card.className = "pf-scenario " + cls;
+      valEl.textContent = (value >= 0 ? "+" : "−") + money(Math.abs(value), 2);
+      valEl.className = "v " + cls;
+    };
+    setScenario("pfProfitA", profitIfA);
+    setScenario("pfProfitB", profitIfB);
+    setScenario("pfProfitNone", profitIfNone, true);
+
+    const delta = sharesA - sharesB;
+    const maxLoss = Math.min(profitIfA, profitIfB);
+    let summary;
+    if(Math.abs(delta) < 0.0001){
+      summary = `两边同比例成交，净暴露为 0；对冲完整，最坏结果 <b>${money(maxLoss,2)}</b>（含已付手续费）。`;
+    }else{
+      const biased = delta > 0 ? a.name : b.name;
+      const exposedLoser = delta > 0 ? b.name : a.name;
+      summary = `两边成交差 <b>${num(Math.abs(delta),2)}</b> 份，偏多的一侧是 <b>${escapeHtml(biased)}</b>。若 <b>${escapeHtml(exposedLoser)}</b> 赢，损失扩大到 <b>${money(Math.abs(maxLoss),2)}</b>；极端情形（两边都没赢）损失 <b>${money(totalSpend,2)}</b>。`;
+    }
+    $("pfSummary").innerHTML = summary;
   }
 
   function escapeHtml(s){
@@ -1568,8 +1759,13 @@ Polymarket Maker：fee/share = 0
     });
 
     $("fetchUrlBtn").addEventListener("click", fetchAndFillFromUrl);
+    $("refreshUrlBtn").addEventListener("click", fetchAndFillFromUrl);
     $("marketUrl").addEventListener("keydown", (e) => {
       if(e.key === "Enter"){ e.preventDefault(); fetchAndFillFromUrl(); }
+    });
+
+    ["pfA","pfB"].forEach(id => {
+      $(id).addEventListener("input", renderPartialFill);
     });
 
     reset();
