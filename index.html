@@ -96,6 +96,15 @@
     .platform-card .plat-fees.hide{display:none;}
     .platform-card .plat-fees span{color:var(--muted);font-size:11px;}
     .platform-card .plat-fees b{text-align:right;font-weight:700;}
+    /* After success, wrap urlbox-books in a collapsible details */
+    .book-fold{margin-top:8px;border:1px solid var(--line);border-radius:8px;}
+    .book-fold > summary{cursor:pointer;padding:6px 10px;font-size:11.5px;color:var(--muted);list-style:none;user-select:none;display:flex;align-items:center;gap:6px;}
+    .book-fold > summary::-webkit-details-marker{display:none;}
+    .book-fold > summary::after{content:"▾";font-size:10px;margin-left:auto;color:var(--muted);transition:transform .2s ease;}
+    .book-fold[open] > summary::after{transform:rotate(180deg);}
+    .book-fold[open] > .urlbox-books{padding:8px 10px;}
+    .books-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px 10px;}
+    @media (max-width:480px){ .books-grid{grid-template-columns:1fr;} }
     .legs-grid{margin-top:12px;}
     @media (min-width:981px){
       .legs-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:start;}
@@ -388,6 +397,7 @@
 
     /* Pair strip: compact one-line feel */
     .pair-strip{margin:0 0 12px;padding:8px 12px;border-radius:10px;background:transparent;}
+    .pair-strip.pair-warn{border-color:var(--warn);background:rgba(245,158,11,.08);}
     .pair-strip .pval{font-weight:600;font-size:12.5px;}
     .pair-strip .pmeta{font-size:11px;}
 
@@ -515,6 +525,24 @@
 
     /* Help tooltip (native title feels slow; add an abbr-like marker) */
     .jargon{border-bottom:1px dotted var(--muted);cursor:help;}
+
+    /* Results empty/welcome state */
+    .empty-welcome{padding:28px 18px;border:1px dashed var(--line);border-radius:14px;text-align:center;color:var(--muted);}
+    .empty-welcome.hide,#resultsBody.hide{display:none;}
+    .empty-welcome b{display:block;color:var(--sub);font-size:15px;margin-bottom:6px;font-weight:700;}
+    .empty-welcome p{font-size:13px;line-height:1.6;margin:0;}
+
+    /* Playbook action buttons */
+    .pb-actions{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
+    .pb-actions button, .pb-actions a{font-size:11px;padding:3px 8px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--sub);cursor:pointer;font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:3px;}
+    .pb-actions button:hover, .pb-actions a:hover{border-color:var(--accent);color:var(--accent);background:rgba(124,58,237,.06);}
+    .pb-actions button.copied{border-color:var(--good);color:var(--good);}
+    .pb-actions button.copied::before{content:"✓ ";}
+
+    /* Verdict advice */
+    #verdictAdvice{margin-top:8px;padding:6px 10px;font-size:12px;color:var(--sub);border-left:3px solid var(--accent);background:rgba(124,58,237,.05);border-radius:0 6px 6px 0;}
+    #verdictAdvice.hide{display:none;}
+    #verdictAdvice b{color:var(--accent);}
     .leg-money .lm-shares{font-size:11.5px;color:var(--muted);padding-left:2px;}
     .leg-money.overbudget{border-color:var(--bad);background:rgba(239,68,68,.06);}
     .leg-money.overbudget .lm-shares{color:var(--bad);}
@@ -847,11 +875,19 @@
     <main class="results card">
       <h2>结果</h2>
 
+      <div id="emptyWelcome" class="empty-welcome">
+        <b>先在上方粘一个市场链接</b>
+        <p>支持 Polymarket 事件页或 Predict.fun 市场页。抓到一边后会自动搜对家，算出两边的对冲成本、手续费和应花金额。</p>
+      </div>
+
+      <div id="resultsBody" class="hide">
+
       <div class="verdict" id="verdict" aria-live="polite">
         <span class="verdict-tag" id="verdictTag">—</span>
         <div class="verdict-main">
           <div class="verdict-amount" id="verdictAmount">—</div>
           <div class="verdict-sub" id="verdictSub">—</div>
+          <div id="verdictAdvice" class="hide"></div>
         </div>
         <div class="verdict-side" hidden>
           <div class="k">每 $1 兑付成本</div>
@@ -1001,19 +1037,26 @@
           </div>
         </div>
       </details>
+
+      </div> <!-- /#resultsBody -->
     </main>
   </section>
 
   <footer>
-    <b>数据来源与口径：</b><br>
-    Predict.fun 文档写明 Makers pay no fee，Takers pay 0.018%–2%，并给出 Raw Fee = Base Fee % × min(Price, 1−Price) × Shares，10% fee discount 时乘以 0.9。来源：
-    <a href="https://docs.predict.fun/the-basics/predict-fees-and-limits" target="_blank" rel="noreferrer">Predict Fees and Limits</a>。<br>
-    Predict.fun 订单簿文档写明限价单会留在订单簿直到被他人 take，市价单会立即按当前可用挂单执行。来源：
-    <a href="https://docs.predict.fun/the-basics/understanding-the-order-book" target="_blank" rel="noreferrer">Understanding the Order Book</a>。<br>
-    Polymarket 文档写明 taker fee = C × feeRate × p × (1 − p)，Makers are never charged fees，且费率按类别不同；Polymarket 价格/订单簿文档说明市价单立即执行，限价单按指定价格或更优价格执行，且“market order”本质上是立即执行的限价单。来源：
-    <a href="https://docs.polymarket.com/trading/fees" target="_blank" rel="noreferrer">Polymarket Fees</a>、
-    <a href="https://docs.polymarket.com/concepts/prices-orderbook" target="_blank" rel="noreferrer">Prices & Orderbook</a>。<br>
-    免责声明：本页只做仓位和手续费数学计算，不构成投资建议；未纳入盘口深度、滑点、成交失败、链上 gas、充值提现、汇率和平台规则更新等风险。
+    <details>
+      <summary style="cursor:pointer;color:var(--muted);font-size:12px;padding:4px 0;">数据来源 / 免责声明</summary>
+      <div style="margin-top:6px;">
+        <b>数据来源与口径：</b><br>
+        Predict.fun 文档写明 Makers pay no fee，Takers pay 0.018%–2%，并给出 Raw Fee = Base Fee % × min(Price, 1−Price) × Shares，10% fee discount 时乘以 0.9。来源：
+        <a href="https://docs.predict.fun/the-basics/predict-fees-and-limits" target="_blank" rel="noreferrer">Predict Fees and Limits</a>。<br>
+        Predict.fun 订单簿文档写明限价单会留在订单簿直到被他人 take，市价单会立即按当前可用挂单执行。来源：
+        <a href="https://docs.predict.fun/the-basics/understanding-the-order-book" target="_blank" rel="noreferrer">Understanding the Order Book</a>。<br>
+        Polymarket 文档写明 taker fee = C × feeRate × p × (1 − p)，Makers are never charged fees，且费率按类别不同；Polymarket 价格/订单簿文档说明市价单立即执行，限价单按指定价格或更优价格执行，且“market order”本质上是立即执行的限价单。来源：
+        <a href="https://docs.polymarket.com/trading/fees" target="_blank" rel="noreferrer">Polymarket Fees</a>、
+        <a href="https://docs.polymarket.com/concepts/prices-orderbook" target="_blank" rel="noreferrer">Prices & Orderbook</a>。<br>
+        免责声明：本页只做仓位和手续费数学计算，不构成投资建议；未纳入盘口深度、滑点、成交失败、链上 gas、充值提现、汇率和平台规则更新等风险。
+      </div>
+    </details>
   </footer>
 </div>
 
@@ -1744,6 +1787,31 @@ Polymarket Maker：fee/share = 0
     const predictEmpty = $("predictEmpty");
     if(polyEmpty) polyEmpty.classList.toggle("hide", !!_currentEvent);
     if(predictEmpty) predictEmpty.classList.toggle("hide", !!_currentPredict);
+    const hasAny = !!(_currentEvent || _currentPredict);
+    const welcome = $("emptyWelcome");
+    const body = $("resultsBody");
+    if(welcome) welcome.classList.toggle("hide", hasAny);
+    if(body) body.classList.toggle("hide", !hasAny);
+  }
+
+  function renderVerdictAdvice({status, pA, pB, fpsA, fpsB}){
+    const el = $("verdictAdvice");
+    if(!el) return;
+    if(status === "good"){
+      el.classList.add("hide");
+      return;
+    }
+    const bePriceA = solveBreakEvenPrice("B", "A");
+    const bePriceB = solveBreakEvenPrice("A", "B");
+    if(bePriceA === null && bePriceB === null){
+      el.classList.add("hide"); return;
+    }
+    const parts = [];
+    if(bePriceA !== null && bePriceA < pA) parts.push(`A 价降到 <b>≤ ${cents(bePriceA)}</b>`);
+    if(bePriceB !== null && bePriceB < pB) parts.push(`B 价降到 <b>≤ ${cents(bePriceB)}</b>`);
+    if(!parts.length){ el.classList.add("hide"); return; }
+    el.classList.remove("hide");
+    el.innerHTML = `下一步：要打平，${parts.join(" 或 ")} 才值得做。`;
   }
 
   function renderSideBook(side){
@@ -1861,7 +1929,7 @@ Polymarket Maker：fee/share = 0
         <button type="button" class="secondary" data-pf-side="${side}" data-pf-target="B">填入 B · VWAP @ ${sizeTip}</button>
       </div>`;
     books.hidden = false;
-    books.innerHTML = `
+    const predictInner = `
       <div class="predict-book-wrap">
         ${renderBookCard(`${yesName}（Predict · Yes 侧）`, yesBook, target)}
         ${fillBtns("yes")}
@@ -1870,6 +1938,7 @@ Polymarket Maker：fee/share = 0
         ${renderBookCard(`${noName}（Predict · No 合成 = 1 − Yes）`, noBook, target)}
         ${fillBtns("no")}
       </div>`;
+    books.innerHTML = `<details class="book-fold"><summary>盘口详情（点击展开）</summary><div class="books-grid">${predictInner}</div></details>`;
     books.querySelectorAll("[data-pf-side][data-pf-target]").forEach(b => {
       b.addEventListener("click", onPredictFillClick);
     });
@@ -2098,6 +2167,35 @@ Polymarket Maker：fee/share = 0
       .map(x => ({p: parseFloat(x.price), s: parseFloat(x.size)}))
       .filter(x => Number.isFinite(x.p) && Number.isFinite(x.s) && x.s > 0)
       .sort((a,b) => b.p - a.p);
+  }
+
+  // Iteratively converge on the VWAP pair for a bankroll-split hedge across
+  // two order books. Each iteration: given current (pA,pB,fees), derive shares
+  // from bankroll/unitCost, then re-walk both books at those shares. Stops
+  // when prices stabilize or after maxIter iterations.
+  function iterativeVwap({bookA, bookB, bankroll, feeFnA, feeFnB, maxIter = 5}){
+    const baseA = bestAskOf(bookA);
+    const baseB = bestAskOf(bookB);
+    if(baseA == null || baseB == null){
+      return {pA: baseA, pB: baseB, shares: 0, exhausted: false};
+    }
+    let pA = baseA, pB = baseB, shares = 0, exhausted = false;
+    for(let i = 0; i < maxIter; i++){
+      const fA = feeFnA(pA), fB = feeFnB(pB);
+      const unit = pA + fA + pB + fB;
+      if(!(unit > 0)) break;
+      shares = bankroll / unit;
+      const wA = walkBook(sortedAsks(bookA), {shares});
+      const wB = walkBook(sortedAsks(bookB), {shares});
+      const newA = wA.avg !== null ? wA.avg : pA;
+      const newB = wB.avg !== null ? wB.avg : pB;
+      exhausted = wA.exhausted || wB.exhausted;
+      if(Math.abs(newA - pA) < 1e-4 && Math.abs(newB - pB) < 1e-4){
+        pA = newA; pB = newB; break;
+      }
+      pA = newA; pB = newB;
+    }
+    return {pA, pB, shares, exhausted};
   }
 
   // Walk `levels` (asks sorted asc or bids sorted desc) consuming liquidity
@@ -2342,18 +2440,22 @@ Polymarket Maker：fee/share = 0
     _currentEvent.bookB = bookB;
     _currentEvent.lastFetch = Date.now();
 
-    const target = currentSizeTarget();
-    const walkA = walkBook(sortedAsks(bookA), target);
-    const walkB = walkBook(sortedAsks(bookB), target);
-    const pA = walkA.avg !== null ? walkA.avg : bestAskOf(bookA);
-    const pB = walkB.avg !== null ? walkB.avg : bestAskOf(bookB);
+    const bankrollNow = readNum("bankroll") || 0;
+    // Set platforms early so feePerShareAt reads the right formula.
+    $("platformA").value = "poly";
+    $("platformB").value = "poly";
+    const iv = iterativeVwap({
+      bookA, bookB,
+      bankroll: bankrollNow,
+      feeFnA: p => feePerShareAt("A", p),
+      feeFnB: p => feePerShareAt("B", p),
+    });
+    const pA = iv.pA, pB = iv.pB;
 
     $("nameA").value = mA.name;
-    $("platformA").value = "poly";
     if(pA !== null) $("priceA").value = (pA*100).toFixed(2);
 
     $("nameB").value = mB.name;
-    $("platformB").value = "poly";
     if(pB !== null) $("priceB").value = (pB*100).toFixed(2);
 
     setSideBook("A", {book: bookA, source:"poly", sourceLabel:"Polymarket", title: mA.name});
@@ -2375,11 +2477,13 @@ Polymarket Maker：fee/share = 0
       ? `（${_currentEvent.markets.length} 个 outcome，可在下方切换）`
       : "";
     const viaLabel = clobVia === "vercel" ? "（经 Vercel API 转发）" : "";
-    const sizeTip = sizeLabel(target);
+    const fill = {shares: iv.shares};
+    const sizeTip = `${num(iv.shares, 0)} 份/边`;
     status.textContent = `${ts} · A ${pAs}，B ${pBs}（VWAP @ ${sizeTip}）${multiTip}${viaLabel}。`;
 
     books.hidden = false;
-    books.innerHTML = renderBookCard(mA.name, bookA, target) + renderBookCard(mB.name, bookB, target);
+    const bookInner = renderBookCard(mA.name, bookA, fill) + renderBookCard(mB.name, bookB, fill);
+    books.innerHTML = `<details class="book-fold"><summary>盘口详情（点击展开）</summary><div class="books-grid">${bookInner}</div></details>`;
     refreshPairingStrip();
     startAutoRefreshIfEnabled();
     toast(`已抓 Polymarket：${_currentEvent.title || parsed.slug}`, "ok");
@@ -2488,18 +2592,18 @@ Polymarket Maker：fee/share = 0
     if(unitCost < 0.9995){
       status = "good";
       tagText = "对冲可获利";
-      amountText = `锁定盈利 +${money(profit,2)}`;
-      subText = `${reasonLine}每 $1 兑付成本低于 $1，对冲后仍有净收益。执行前确认盘口深度足够、两边市场结算规则一致。`;
+      amountText = `执行后净赚 ${money(profit,2)}`;
+      subText = `每兑付 $1 只需 ${money(unitCost,4)}，对冲后仍有净收益。执行前确认盘口深度、两边结算条件一致。`;
     }else if(unitCost > 1.0005){
       status = "bad";
       tagText = "不建议执行";
-      amountText = `锁定亏损 −${money(Math.abs(profit),2)}`;
-      subText = `${reasonLine}每 $1 兑付成本高于 $1，任一结果都会亏。除非有返点或更好成交价，否则不要执行。`;
+      amountText = `执行后必亏 ${money(Math.abs(profit),2)}`;
+      subText = `每兑付 $1 需花 ${money(unitCost,4)}。两边价 ${money(priceSum,4)} + 手续费 ${money(fpsA+fpsB,4)}/份 = 必亏组合。除非有返点或更好成交价，否则不要执行。`;
     }else{
       status = "warn";
       tagText = "接近打平";
       amountText = `约 ${money(profit,2)}`;
-      subText = `${reasonLine}每 $1 兑付成本非常接近 $1，最终盈亏由实际成交价和滑点决定。`;
+      subText = `每兑付 $1 需花 ${money(unitCost,4)}，接近 $1。最终盈亏由实际成交价和滑点决定。`;
     }
 
     $("verdict").className = "verdict " + status;
@@ -2572,12 +2676,32 @@ Polymarket Maker：fee/share = 0
       meta: [{k: "单边最大损失", v: money(first.spend,2)}],
       note: `若第二步未成交，单边暴露在 ${first.name} 上。`
     });
-    $("playbook").innerHTML = steps.map(s => {
+    // Enrich steps with copyable raw values + source URL for action buttons.
+    steps.forEach(s => {
+      if(s.warn || !s.side) return;
+      const legData = s.side === "A" ? a : b;
+      const src = _sideSource[s.side];
+      s.copy = {
+        price: (legData.p*100).toFixed(2),
+        shares: num(legData.shares, 4),
+        spend: legData.spend.toFixed(2),
+      };
+      s.url = (src && src.url) || "";
+    });
+
+    $("playbook").innerHTML = steps.map((s, idx) => {
       if(s.warn){
         return `<li class="pb-step warn"><div class="pb-num">!</div><div><div class="pb-head"><span class="pb-action">${escapeHtml(s.head)}</span></div><div class="pb-note">${s.note}</div></div></li>`;
       }
       const sideCls = s.side === "B" ? "step-b" : "";
       const meta = s.meta.map(m => `<div><span>${escapeHtml(m.k)}</span><b>${m.v}</b></div>`).join("");
+      const actions = s.copy ? `
+        <div class="pb-actions">
+          <button type="button" data-pb="${idx}" data-copy="price">复制价格</button>
+          <button type="button" data-pb="${idx}" data-copy="shares">复制份额</button>
+          <button type="button" data-pb="${idx}" data-copy="spend">复制金额</button>
+          ${s.url ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noreferrer">打开市场 ↗</a>` : ""}
+        </div>` : "";
       return `<li class="pb-step ${sideCls}">
         <div class="pb-num">${s.n}</div>
         <div>
@@ -2588,9 +2712,31 @@ Polymarket Maker：fee/share = 0
           </div>
           <div class="pb-meta">${meta}</div>
           ${s.note ? `<div class="pb-note">${escapeHtml(s.note)}</div>` : ""}
+          ${actions}
         </div>
       </li>`;
     }).join("");
+
+    // Wire copy buttons (rebuilt each render).
+    $("playbook").querySelectorAll("[data-copy]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const idx = parseInt(btn.getAttribute("data-pb"), 10);
+        const kind = btn.getAttribute("data-copy");
+        const step = steps[idx];
+        if(!step || !step.copy) return;
+        const value = step.copy[kind];
+        const label = kind === "price" ? "价格" : kind === "shares" ? "份额" : "金额";
+        try{
+          await navigator.clipboard.writeText(value);
+          btn.textContent = "已复制";
+          btn.classList.add("copied");
+          toast(`已复制 ${label}：${value}`, "ok");
+          setTimeout(() => { btn.textContent = `复制${label}`; btn.classList.remove("copied"); }, 1500);
+        }catch(_){
+          toast("复制失败，请手动选中", "bad");
+        }
+      });
+    });
 
     const bePriceA = solveBreakEvenPrice("B", "A");
     const bePriceB = solveBreakEvenPrice("A", "B");
@@ -2658,6 +2804,7 @@ Polymarket Maker：fee/share = 0
     renderLegMoney("B", {spend: b.spend, shares, price: b.p, over});
     renderPlatformFees("poly");
     renderPlatformFees("predict");
+    renderVerdictAdvice({status, pA, pB, fpsA, fpsB});
     updateEmptyStates();
   }
 
@@ -2685,7 +2832,9 @@ Polymarket Maker：fee/share = 0
     const lastFetch = fetches.length ? Math.max(...fetches) : now.getTime();
     const age = Math.round((now.getTime() - lastFetch) / 1000);
     const ts = new Date(lastFetch).toLocaleTimeString([], {hour12:false});
-    $("arbTs").textContent = `最近抓盘 ${ts}（${age}s 前）`;
+    const tsEl = $("arbTs");
+    tsEl.textContent = `最近抓盘 ${ts}（${age}s 前）`;
+    tsEl.style.color = age > 120 ? "var(--bad)" : age > 60 ? "var(--warn)" : "";
     renderArbLive();
   }
 
@@ -2753,9 +2902,14 @@ Polymarket Maker：fee/share = 0
       if(polyDate && pdDate){
         const diffDays = Math.abs(new Date(polyDate).getTime() - new Date(pdDate).getTime()) / 86400000;
         if(diffDays > 1.5){
-          $("pairPolyMeta").innerHTML += ` <span class="warn-pill">日期差 ${diffDays.toFixed(1)}d</span>`;
+          $("pairPolyMeta").innerHTML += ` <span class="warn-pill" title="两边结算日期相差超过 1.5 天，可能不是同一事件">⚠ 日期差 ${diffDays.toFixed(1)}d</span>`;
+          strip.classList.add("pair-warn");
+        } else {
+          strip.classList.remove("pair-warn");
         }
       }
+    } else {
+      strip.classList.remove("pair-warn");
     }
   }
 
@@ -2806,7 +2960,8 @@ Polymarket Maker：fee/share = 0
       setSideBook("A", {book: resA.book, source:"poly", sourceLabel:"Polymarket", title: mA.name});
       setSideBook("B", {book: resB.book, source:"poly", sourceLabel:"Polymarket", title: mB.name});
       const books = $("urlBooks");
-      books.innerHTML = renderBookCard(mA.name, resA.book, target) + renderBookCard(mB.name, resB.book, target);
+      const inner = renderBookCard(mA.name, resA.book, target) + renderBookCard(mB.name, resB.book, target);
+      books.innerHTML = `<details class="book-fold"><summary>盘口详情（点击展开）</summary><div class="books-grid">${inner}</div></details>`;
       books.hidden = false;
       calculate();
     }catch(_){ /* silent */ }
@@ -2828,7 +2983,7 @@ Polymarket Maker：fee/share = 0
           <button type="button" class="secondary" data-pf-side="${side}" data-pf-target="B">填入 B · VWAP @ ${sizeTip}</button>
         </div>`;
       const books = $("predictBooks");
-      books.innerHTML = `
+      const predictInner = `
         <div class="predict-book-wrap">
           ${renderBookCard(`${_currentPredict.yesName}（Predict · Yes 侧）`, _currentPredict.yesBook, target)}
           ${fillBtns("yes")}
@@ -2837,6 +2992,7 @@ Polymarket Maker：fee/share = 0
           ${renderBookCard(`${_currentPredict.noName}（Predict · No 合成 = 1 − Yes）`, _currentPredict.noBook, target)}
           ${fillBtns("no")}
         </div>`;
+      books.innerHTML = `<details class="book-fold"><summary>盘口详情（点击展开）</summary><div class="books-grid">${predictInner}</div></details>`;
       books.querySelectorAll("[data-pf-side][data-pf-target]").forEach(b => b.addEventListener("click", onPredictFillClick));
       ["A","B"].forEach(t => {
         const side = _currentPredict["fill"+t];
