@@ -1047,7 +1047,14 @@ Polymarket Maker：fee/share = 0
     }catch(_){ return null; }
   }
 
-  const POLYMARKET_API_BASE = "/api/polymarket";
+  const VERCEL_API_ROOT = "https://yuceyuce.vercel.app";
+  const POLYMARKET_API_BASE = (() => {
+    const h = location.hostname;
+    if(h.endsWith(".vercel.app") || h === "localhost" || h === "127.0.0.1" || h === ""){
+      return "/api/polymarket";
+    }
+    return `${VERCEL_API_ROOT}/api/polymarket`;
+  })();
   const POLY_TIMEOUT_MS = 12000;
 
   try{ localStorage.removeItem("yuce-poly-pref"); }catch(_){}
