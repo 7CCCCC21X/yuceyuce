@@ -72,7 +72,14 @@
     .stat .label{font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:600;}
     .stat .value{font-size:24px;font-weight:800;letter-spacing:-.02em;}
     .stat .sub{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5;}
-    .grid{display:grid;grid-template-columns:360px 1fr;gap:18px;align-items:start;}
+    .grid{display:grid;grid-template-columns:480px 1fr;gap:18px;align-items:start;}
+    .legs-grid{margin-top:12px;}
+    @media (min-width:981px){
+      .legs-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:start;}
+      .legs-grid > .leg{margin-top:0;}
+      .legs-grid > .swap-row{margin:0;align-self:start;padding-top:42px;}
+      .legs-grid .row{grid-template-columns:1fr;gap:8px;}
+    }
     .inputs{padding:18px;position:sticky;top:14px;}
     .results{padding:18px;}
     label{display:block;font-size:12px;color:var(--sub);margin-bottom:7px;font-weight:650;}
@@ -202,6 +209,29 @@
     details.advanced[open] summary::after{transform:rotate(180deg);}
     details.advanced summary:hover{border-color:var(--accent);color:var(--accent);}
     details.advanced > .leg{margin-top:8px;}
+    .urlbox{margin:-4px 0 14px;border:1px dashed var(--line-strong);border-radius:16px;padding:12px 14px;background:linear-gradient(180deg,rgba(124,58,237,.06),rgba(2,6,23,.10));}
+    :root[data-theme="light"] .urlbox{background:linear-gradient(180deg,rgba(124,58,237,.05),rgba(255,255,255,.7));}
+    .urlbox-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;font-size:13px;color:var(--sub);font-weight:700;flex-wrap:wrap;}
+    .urlbox-row{display:flex;gap:8px;}
+    .urlbox-row input{flex:1;min-width:0;}
+    .urlbox-row button{padding:10px 14px;font-size:13px;white-space:nowrap;}
+    .urlbox-status{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.55;min-height:0;}
+    .urlbox-status.ok{color:var(--good);}
+    .urlbox-status.bad{color:var(--bad);}
+    .urlbox-status.loading{color:var(--accent);}
+    .urlbox-books{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+    .bookcard{padding:10px;border:1px solid var(--line);border-radius:12px;background:rgba(2,6,23,.22);font-size:12px;}
+    :root[data-theme="light"] .bookcard{background:rgba(255,255,255,.6);}
+    .bookcard h4{margin:0 0 6px;font-size:12px;color:var(--sub);font-weight:700;display:flex;justify-content:space-between;gap:6px;}
+    .bookcard h4 span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%;}
+    .bookcard .rows{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-variant-numeric:tabular-nums;}
+    .bookcard .rows > div{padding:2px 0;}
+    .bookcard .rows .lbl{color:var(--muted);font-size:11px;}
+    .bookcard .ask{color:var(--bad);}
+    .bookcard .bid{color:var(--good);}
+    .bookcard .spread{font-size:11px;color:var(--muted);text-align:center;margin:4px 0;padding:2px 0;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line);}
+    .bookcard .empty{color:var(--muted);font-size:11px;text-align:center;padding:6px 0;}
+    @media (max-width:480px){ .urlbox-books{grid-template-columns:1fr;} }
     .hide{display:none;}
     @media (max-width:980px){
       .hero,.grid,.explain{grid-template-columns:1fr}
@@ -285,6 +315,19 @@
     <aside class="inputs card">
       <h2>输入</h2>
 
+      <div class="urlbox">
+        <div class="urlbox-title">
+          <span>从 Polymarket 链接自动抓盘</span>
+          <span class="datechip"><span class="dotmark"></span>仅支持 Polymarket</span>
+        </div>
+        <div class="urlbox-row">
+          <input id="marketUrl" type="url" placeholder="https://polymarket.com/event/..." autocomplete="off">
+          <button type="button" class="secondary" id="fetchUrlBtn">抓取</button>
+        </div>
+        <div id="urlStatus" class="urlbox-status">粘贴 polymarket.com/event/... 的链接，自动识别两边 outcome 并用 best ask 填入 A/B 价格。</div>
+        <div id="urlBooks" class="urlbox-books" hidden></div>
+      </div>
+
       <div class="presets" role="group" aria-label="常用场景预设">
         <button type="button" class="preset-chip" data-preset="predict-taker">双 Predict · Taker</button>
         <button type="button" class="preset-chip" data-preset="predict-taker-10">Predict · Taker · 10% 返点</button>
@@ -309,6 +352,7 @@
         </div>
       </div>
 
+      <div class="legs-grid">
       <div class="leg">
         <div class="leg-title"><h3>A 结果</h3><span class="pill">例：NIP</span></div>
 
@@ -437,6 +481,8 @@
             <input id="customFeePerShareB" type="number" step="0.0001" value="0">
           </div>
         </div>
+      </div>
+
       </div>
 
       <details class="advanced">
@@ -900,6 +946,169 @@ Polymarket Maker：fee/share = 0
     input.dispatchEvent(new Event("input", {bubbles:true}));
   }
 
+  function parsePolymarketUrl(raw){
+    try{
+      const u = new URL(raw.trim());
+      if(!/(^|\.)polymarket\.com$/.test(u.hostname)) return null;
+      const parts = u.pathname.split("/").filter(Boolean);
+      const i = parts.indexOf("event");
+      if(i < 0 || !parts[i+1]) return null;
+      return { slug: decodeURIComponent(parts[i+1]), marketSlug: parts[i+2] ? decodeURIComponent(parts[i+2]) : null };
+    }catch(_){ return null; }
+  }
+
+  async function fetchGammaEvent(slug){
+    const r = await fetch(`https://gamma-api.polymarket.com/events?slug=${encodeURIComponent(slug)}`, {cache:"no-store"});
+    if(!r.ok) throw new Error(`gamma HTTP ${r.status}`);
+    const arr = await r.json();
+    if(!Array.isArray(arr) || !arr.length) throw new Error("未找到该事件，检查 URL 是否正确");
+    return arr[0];
+  }
+
+  async function fetchClobBook(tokenId){
+    const r = await fetch(`https://clob.polymarket.com/book?token_id=${encodeURIComponent(tokenId)}`, {cache:"no-store"});
+    if(!r.ok) throw new Error(`clob HTTP ${r.status}`);
+    return r.json();
+  }
+
+  function parseJsonField(s, fallback){
+    if(s == null) return fallback;
+    if(typeof s !== "string") return s;
+    try{ return JSON.parse(s); }catch(_){ return fallback; }
+  }
+
+  function bestAskOf(book){
+    const asks = (book && book.asks) || [];
+    const xs = asks.map(x => parseFloat(x.price)).filter(Number.isFinite);
+    return xs.length ? Math.min(...xs) : null;
+  }
+
+  function bestBidOf(book){
+    const bids = (book && book.bids) || [];
+    const xs = bids.map(x => parseFloat(x.price)).filter(Number.isFinite);
+    return xs.length ? Math.max(...xs) : null;
+  }
+
+  function renderBookCard(title, book){
+    const asks = ((book && book.asks) || [])
+      .map(x => ({p: parseFloat(x.price), s: parseFloat(x.size)}))
+      .filter(x => Number.isFinite(x.p))
+      .sort((a,b)=>a.p-b.p).slice(0,5).reverse();
+    const bids = ((book && book.bids) || [])
+      .map(x => ({p: parseFloat(x.price), s: parseFloat(x.size)}))
+      .filter(x => Number.isFinite(x.p))
+      .sort((a,b)=>b.p-a.p).slice(0,5);
+    const askRows = asks.length
+      ? asks.map(x => `<div class="ask">${(x.p*100).toFixed(2)}¢</div><div class="ask">${num(x.s,0)}</div>`).join("")
+      : `<div class="empty" style="grid-column:1/-1;">无卖单</div>`;
+    const bidRows = bids.length
+      ? bids.map(x => `<div class="bid">${(x.p*100).toFixed(2)}¢</div><div class="bid">${num(x.s,0)}</div>`).join("")
+      : `<div class="empty" style="grid-column:1/-1;">无买单</div>`;
+    const ba = bestAskOf(book), bb = bestBidOf(book);
+    const spread = (ba !== null && bb !== null) ? `价差 ${((ba-bb)*100).toFixed(2)}¢` : "—";
+    return `
+      <div class="bookcard">
+        <h4><span>${escapeHtml(title)}</span><span class="muted-text">¢ / 份</span></h4>
+        <div class="rows"><div class="lbl">ask</div><div class="lbl">size</div>${askRows}</div>
+        <div class="spread">${spread}</div>
+        <div class="rows"><div class="lbl">bid</div><div class="lbl">size</div>${bidRows}</div>
+      </div>
+    `;
+  }
+
+  let _fetchSeq = 0;
+  async function fetchAndFillFromUrl(){
+    const urlInput = $("marketUrl");
+    const status = $("urlStatus");
+    const books = $("urlBooks");
+    const btn = $("fetchUrlBtn");
+    const raw = urlInput.value.trim();
+    if(!raw){ status.className = "urlbox-status"; status.textContent = "请先粘贴链接。"; return; }
+
+    const parsed = parsePolymarketUrl(raw);
+    if(!parsed){
+      status.className = "urlbox-status bad";
+      status.textContent = "无法识别链接。目前只支持 polymarket.com/event/... 形式。";
+      return;
+    }
+
+    const mySeq = ++_fetchSeq;
+    btn.disabled = true;
+    btn.textContent = "抓取中…";
+    status.className = "urlbox-status loading";
+    status.textContent = `查询事件 ${parsed.slug} …`;
+    books.hidden = true;
+    books.innerHTML = "";
+
+    try{
+      const ev = await fetchGammaEvent(parsed.slug);
+      if(mySeq !== _fetchSeq) return;
+      const markets = (ev.markets || []).filter(m => m && !m.closed && m.active !== false);
+      if(!markets.length) throw new Error("事件下没有活跃市场");
+
+      let labelA, labelB, tokenA, tokenB, scenario;
+      if(markets.length === 1){
+        const m = markets[0];
+        const tokens = parseJsonField(m.clobTokenIds, []);
+        const outcomes = parseJsonField(m.outcomes, ["Yes","No"]);
+        if(!Array.isArray(tokens) || tokens.length < 2) throw new Error("市场缺少 token id");
+        labelA = `${m.question || ev.title || "Market"} · ${outcomes[0] || "Yes"}`;
+        labelB = `${m.question || ev.title || "Market"} · ${outcomes[1] || "No"}`;
+        tokenA = tokens[0]; tokenB = tokens[1];
+        scenario = "binary";
+      }else{
+        const m1 = markets[0], m2 = markets[1];
+        const t1 = parseJsonField(m1.clobTokenIds, []);
+        const t2 = parseJsonField(m2.clobTokenIds, []);
+        if(!t1[0] || !t2[0]) throw new Error("市场缺少 token id");
+        labelA = m1.groupItemTitle || m1.question || "Market A";
+        labelB = m2.groupItemTitle || m2.question || "Market B";
+        tokenA = t1[0]; tokenB = t2[0];
+        scenario = "multi";
+      }
+
+      const [bookA, bookB] = await Promise.all([fetchClobBook(tokenA), fetchClobBook(tokenB)]);
+      if(mySeq !== _fetchSeq) return;
+      const askA = bestAskOf(bookA);
+      const askB = bestAskOf(bookB);
+
+      $("nameA").value = labelA;
+      $("platformA").value = "poly";
+      if(askA !== null) $("priceA").value = (askA*100).toFixed(2);
+
+      $("nameB").value = labelB;
+      $("platformB").value = "poly";
+      if(askB !== null) $("priceB").value = (askB*100).toFixed(2);
+
+      ["A","B"].forEach(syncVisibility);
+      calculate();
+      persistState();
+
+      status.className = "urlbox-status ok";
+      const askAs = askA !== null ? `${(askA*100).toFixed(2)}¢` : "—";
+      const askBs = askB !== null ? `${(askB*100).toFixed(2)}¢` : "—";
+      const scenarioText = scenario === "multi"
+        ? `这是多选事件（${markets.length} 个 outcome），默认取前两个。如需别的 outcome 请手动改 A/B。`
+        : "已用 best ask 填入 A/B。";
+      status.textContent = `已抓取：A ${askAs}，B ${askBs}。${scenarioText}`;
+
+      books.hidden = false;
+      books.innerHTML = renderBookCard(labelA, bookA) + renderBookCard(labelB, bookB);
+    }catch(err){
+      if(mySeq !== _fetchSeq) return;
+      status.className = "urlbox-status bad";
+      const msg = err && err.message ? err.message : String(err);
+      const corsHint = /Failed to fetch|NetworkError/i.test(msg) ? "（可能是网络或 CORS 受限）" : "";
+      status.textContent = `抓取失败：${msg}${corsHint}`;
+      books.hidden = true;
+    }finally{
+      if(mySeq === _fetchSeq){
+        btn.disabled = false;
+        btn.textContent = "抓取";
+      }
+    }
+  }
+
   function calculate(){
     ["A","B"].forEach(syncVisibility);
 
@@ -1263,6 +1472,11 @@ Polymarket Maker：fee/share = 0
         const fine = e.shiftKey ? 0.1 : 1;
         stepPrice(id, step, fine);
       });
+    });
+
+    $("fetchUrlBtn").addEventListener("click", fetchAndFillFromUrl);
+    $("marketUrl").addEventListener("keydown", (e) => {
+      if(e.key === "Enter"){ e.preventDefault(); fetchAndFillFromUrl(); }
     });
 
     reset();
