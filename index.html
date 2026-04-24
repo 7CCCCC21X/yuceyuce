@@ -410,9 +410,21 @@
     details.collapse[open] > summary::after{transform:rotate(180deg);}
     details.collapse > .dbody{padding:0 12px 12px;}
 
-    /* Verdict flatter */
-    .verdict{border-radius:14px;box-shadow:none;}
+    /* Verdict flatter + tighter */
+    .verdict{border-radius:14px;box-shadow:none;padding:14px 16px;}
     .verdict-side{background:transparent;}
+    .verdict-amount{font-size:28px;}
+    .verdict-sub{font-size:12.5px;line-height:1.55;}
+    .summary{gap:8px;}
+    .summary .metric{padding:10px 12px;}
+    .summary .metric .k{font-size:11px;}
+    .summary .metric .v{font-size:20px;}
+    .summary .metric .small{font-size:11px;line-height:1.45;}
+    .results.card{padding:18px;}
+    .results.card h2{font-size:17px;margin-bottom:10px;}
+    .arb-banner{padding:6px 12px;}
+    .pair-strip{padding:6px 12px;}
+    .pair-strip .pval{font-size:12px;}
 
     /* Bookcard default-summary */
     .bookcard .rows{gap:1px 10px;}
@@ -432,12 +444,12 @@
     .note b{color:var(--warn);}
 
     /* Top-of-page bankroll / size bar */
-    .size-bar{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px;padding:10px 12px;margin:0 0 12px;border:1px solid var(--line);border-radius:12px;background:transparent;}
+    .size-bar{display:grid;grid-template-columns:2fr 1fr;gap:10px;padding:10px 12px;margin:0 0 12px;border:1px solid var(--line);border-radius:12px;background:transparent;}
     .size-bar .size-cell{display:flex;flex-direction:column;gap:4px;}
     .size-bar label{font-size:11px;color:var(--muted);font-weight:600;margin:0;}
     .size-bar input,.size-bar select{padding:8px 10px;font-size:13px;}
-    .size-bar .size-bankroll input,.size-bar .size-shares input{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;}
-    @media (max-width:700px){ .size-bar{grid-template-columns:1fr 1fr;} }
+    .size-bar .size-bankroll input{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;}
+    @media (max-width:700px){ .size-bar{grid-template-columns:1fr;} }
 
     /* Drop inputs card H2 since sections are labeled already */
     .inputs > h2{display:none;}
@@ -469,11 +481,21 @@
     .leg-src .ls-link{color:var(--accent);text-decoration:none;font-weight:600;}
     .leg-src .ls-link:hover{text-decoration:underline;}
 
-    /* Per-leg money readout: 应花 $X · N 份 */
-    .leg-money{margin:0 0 10px;padding:8px 10px;border-radius:8px;background:rgba(124,58,237,.06);border:1px dashed var(--line);font-variant-numeric:tabular-nums;display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+    /* Per-leg money: editable anchor + derived shares */
+    .leg-money{margin:0 0 10px;padding:8px 10px;border-radius:8px;border:1px dashed var(--line);background:rgba(124,58,237,.06);font-variant-numeric:tabular-nums;display:flex;flex-direction:column;gap:3px;}
     .leg-money.hide{display:none;}
-    .leg-money .lm-spend{font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.01em;}
-    .leg-money .lm-shares{font-size:11.5px;color:var(--muted);}
+    .leg-money .lm-row{display:flex;align-items:center;gap:6px;}
+    .leg-money .lm-label{font-size:11px;color:var(--muted);}
+    .leg-money .lm-input{flex:1;font-size:18px;font-weight:800;padding:4px 8px;border:1px solid transparent;background:transparent;color:var(--text);border-radius:6px;min-width:0;}
+    .leg-money .lm-input:focus{outline:none;border-color:var(--accent);}
+    .leg-money.anchored .lm-input{border-color:var(--accent);background:rgba(124,58,237,.08);}
+    .leg.leg-b .leg-money.anchored .lm-input{border-color:var(--good);background:rgba(16,185,129,.08);}
+    .leg-money .lm-clear{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px;display:none;}
+    .leg-money.anchored .lm-clear{display:inline-block;}
+    .leg-money .lm-clear:hover{background:rgba(148,163,184,.15);color:var(--text);}
+    .leg-money .lm-shares{font-size:11.5px;color:var(--muted);padding-left:2px;}
+    .leg-money.overbudget{border-color:var(--bad);background:rgba(239,68,68,.06);}
+    .leg-money.overbudget .lm-shares{color:var(--bad);}
     .leg.leg-a .leg-money{background:rgba(124,58,237,.06);}
     .leg.leg-b .leg-money{background:rgba(16,185,129,.06);}
 
@@ -642,7 +664,14 @@
       <div class="leg leg-a">
         <div class="leg-title"><h3>A 结果</h3><div id="legSourceA" class="leg-src hide"></div></div>
         <div id="legBookA" class="leg-book hide"></div>
-        <div id="legMoneyA" class="leg-money hide"></div>
+        <div id="legMoneyA" class="leg-money hide">
+          <div class="lm-row">
+            <span class="lm-label">应花 $</span>
+            <input class="lm-input" id="legAmountA" type="number" step="0.01" min="0" inputmode="decimal" placeholder="按本金自动">
+            <button type="button" class="lm-clear" id="legClearA" title="取消锚定">×</button>
+          </div>
+          <div class="lm-shares" id="legSharesA">—</div>
+        </div>
 
         <div class="row">
           <div>
@@ -711,7 +740,14 @@
       <div class="leg leg-b">
         <div class="leg-title"><h3>B 结果</h3><div id="legSourceB" class="leg-src hide"></div></div>
         <div id="legBookB" class="leg-book hide"></div>
-        <div id="legMoneyB" class="leg-money hide"></div>
+        <div id="legMoneyB" class="leg-money hide">
+          <div class="lm-row">
+            <span class="lm-label">应花 $</span>
+            <input class="lm-input" id="legAmountB" type="number" step="0.01" min="0" inputmode="decimal" placeholder="按本金自动">
+            <button type="button" class="lm-clear" id="legClearB" title="取消锚定">×</button>
+          </div>
+          <div class="lm-shares" id="legSharesB">—</div>
+        </div>
 
         <div class="row">
           <div>
@@ -1615,18 +1651,49 @@ Polymarket Maker：fee/share = 0
       <span>两侧手续费合计</span><b>${(totalFeeY !== null || totalFeeN !== null) ? money((totalFeeY||0)+(totalFeeN||0),2) : "—"}</b>`;
   }
 
+  let _legAnchor = null; // {side: "A"|"B", amount: number}
+
   function renderLegMoney(side, info){
     const el = $("legMoney"+side);
     if(!el) return;
-    if(!info || !(info.spend > 0)){
+    if(!info || !(info.shares > 0)){
       el.classList.add("hide");
-      el.innerHTML = "";
       return;
     }
     el.classList.remove("hide");
-    el.innerHTML = `
-      <span class="lm-spend">${money(info.spend, 2)}</span>
-      <span class="lm-shares">${num(info.shares, 4)} 份 @ ${(info.price*100).toFixed(2)}¢</span>`;
+    const input = $("legAmount"+side);
+    const sharesEl = $("legShares"+side);
+    const isAnchor = !!(_legAnchor && _legAnchor.side === side);
+    el.classList.toggle("anchored", isAnchor);
+    if(input && document.activeElement !== input){
+      input.value = info.spend > 0 ? info.spend.toFixed(2) : "";
+    }
+    if(sharesEl){
+      const base = `${num(info.shares, 4)} 份 @ ${(info.price*100).toFixed(2)}¢`;
+      sharesEl.textContent = info.over
+        ? `${base} · 超出本金 ${money(info.over, 2)}`
+        : base;
+    }
+    el.classList.toggle("overbudget", !!info.over);
+  }
+
+  function onLegAmountInput(side){
+    const input = $("legAmount"+side);
+    if(!input) return;
+    const v = parseFloat(input.value);
+    if(Number.isFinite(v) && v > 0){
+      _legAnchor = {side, amount: v};
+    } else {
+      _legAnchor = null;
+    }
+    calculate();
+  }
+
+  function clearLegAnchor(){
+    _legAnchor = null;
+    if($("legAmountA")) $("legAmountA").value = "";
+    if($("legAmountB")) $("legAmountB").value = "";
+    calculate();
   }
 
   function renderSideBook(side){
@@ -2276,17 +2343,25 @@ Polymarket Maker：fee/share = 0
 
     let unitCost = pA + fpsA + pB + fpsB;
     const floored = $("roundShares").value === "floor";
-    const rawShares = unitCost > 0 ? bankroll / unitCost : 0;
-    const shares = floored ? Math.floor(rawShares) : rawShares;
+    let shares;
+    if(_legAnchor && (_legAnchor.side === "A" || _legAnchor.side === "B")){
+      const unitSide = _legAnchor.side === "A" ? (pA + fpsA) : (pB + fpsB);
+      const raw = unitSide > 0 ? _legAnchor.amount / unitSide : 0;
+      shares = floored ? Math.floor(raw) : raw;
+    } else {
+      const rawShares = unitCost > 0 ? bankroll / unitCost : 0;
+      shares = floored ? Math.floor(rawShares) : rawShares;
+    }
 
     const a = legData("A", shares);
     const b = legData("B", shares);
 
     const totalSpend = a.spend + b.spend;
+    const over = totalSpend > bankroll ? totalSpend - bankroll : 0;
     const payout = shares;
     const profit = payout - totalSpend;
     const roi = totalSpend > 0 ? profit / totalSpend : 0;
-    const leftover = floored ? Math.max(0, bankroll - totalSpend) : 0;
+    const leftover = (!_legAnchor && floored) ? Math.max(0, bankroll - totalSpend) : 0;
 
     const priceSum = pA + pB;
     const noFeeQ = priceSum > 0 ? bankroll / priceSum : 0;
@@ -2525,8 +2600,8 @@ Polymarket Maker：fee/share = 0
     renderPartialFill();
     renderArbBanner({unitCost, roi, profit, shares, status});
     renderSideBook("A"); renderSideBook("B");
-    renderLegMoney("A", {spend: a.spend, shares, price: a.p});
-    renderLegMoney("B", {spend: b.spend, shares, price: b.p});
+    renderLegMoney("A", {spend: a.spend, shares, price: a.p, over});
+    renderLegMoney("B", {spend: b.spend, shares, price: b.p, over});
     renderPlatformFees("poly");
     renderPlatformFees("predict");
   }
@@ -2922,6 +2997,8 @@ Polymarket Maker：fee/share = 0
         syncPolyRate(side);
         onChange();
       });
+      $("legAmount"+side).addEventListener("input", () => onLegAmountInput(side));
+      $("legClear"+side).addEventListener("click", clearLegAnchor);
     });
 
     $("resetBtn").addEventListener("click", () => { reset(); persistState(); });
