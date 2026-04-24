@@ -1049,38 +1049,65 @@ Polymarket Maker：fee/share = 0
 
   const POLY_PROXIES = [
     { label: "direct",     wrap: (u) => u },
-    { label: "corsproxy",  wrap: (u) => `https://corsproxy.io/?${encodeURIComponent(u)}` },
-    { label: "allorigins", wrap: (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` }
+    { label: "allorigins", wrap: (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
+    { label: "codetabs",   wrap: (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}` },
+    { label: "thingproxy", wrap: (u) => `https://thingproxy.freeboard.io/fetch/${u}` },
+    { label: "corsproxy",  wrap: (u) => `https://corsproxy.io/?${encodeURIComponent(u)}` }
   ];
-  let _polyIdx = 0;
+  const POLY_TIMEOUT_MS = 8000;
+  const POLY_PREF_KEY = "yuce-poly-pref";
+  const _polyPref = Object.create(null);
+  try{
+    const cached = JSON.parse(localStorage.getItem(POLY_PREF_KEY) || "{}");
+    for(const k in cached){
+      const idx = POLY_PROXIES.findIndex(p => p.label === cached[k]);
+      if(idx >= 0) _polyPref[k] = idx;
+    }
+  }catch(_){}
 
-  async function fetchJsonPoly(url, opts){
+  function savePolyPref(){
+    try{
+      const out = {};
+      for(const k in _polyPref) out[k] = POLY_PROXIES[_polyPref[k]].label;
+      localStorage.setItem(POLY_PREF_KEY, JSON.stringify(out));
+    }catch(_){}
+  }
+
+  async function fetchJsonPoly(url, opts, domainKey){
+    const key = domainKey || "default";
+    const preferred = _polyPref[key] || 0;
     const errors = [];
     for(let k = 0; k < POLY_PROXIES.length; k++){
-      const idx = (_polyIdx + k) % POLY_PROXIES.length;
-      const target = POLY_PROXIES[idx].wrap(url);
+      const idx = (preferred + k) % POLY_PROXIES.length;
+      const proxy = POLY_PROXIES[idx];
+      const target = proxy.wrap(url);
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), POLY_TIMEOUT_MS);
       try{
-        const r = await fetch(target, opts);
-        if(!r.ok){ errors.push(`${POLY_PROXIES[idx].label} HTTP ${r.status}`); continue; }
+        const r = await fetch(target, Object.assign({}, opts, {signal: ctl.signal}));
+        clearTimeout(timer);
+        if(!r.ok){ errors.push(`${proxy.label} HTTP ${r.status}`); continue; }
         const data = await r.json();
-        _polyIdx = idx;
-        return { data, via: POLY_PROXIES[idx].label };
+        _polyPref[key] = idx;
+        savePolyPref();
+        return { data, via: proxy.label };
       }catch(e){
-        const msg = e && e.message ? e.message : String(e);
-        errors.push(`${POLY_PROXIES[idx].label}: ${msg}`);
+        clearTimeout(timer);
+        const msg = e && e.name === "AbortError" ? `timeout ${POLY_TIMEOUT_MS/1000}s` : (e && e.message ? e.message : String(e));
+        errors.push(`${proxy.label}: ${msg}`);
       }
     }
     throw new Error(`所有抓取路径都失败 — ${errors.join(" | ")}`);
   }
 
   async function fetchGammaEvent(slug){
-    const { data: arr, via } = await fetchJsonPoly(`https://gamma-api.polymarket.com/events?slug=${encodeURIComponent(slug)}`, {cache:"no-store"});
+    const { data: arr, via } = await fetchJsonPoly(`https://gamma-api.polymarket.com/events?slug=${encodeURIComponent(slug)}`, {cache:"no-store"}, "gamma");
     if(!Array.isArray(arr) || !arr.length) throw new Error("未找到该事件，检查 URL 是否正确");
     return { event: arr[0], via };
   }
 
   async function fetchClobBook(tokenId){
-    const { data, via } = await fetchJsonPoly(`https://clob.polymarket.com/book?token_id=${encodeURIComponent(tokenId)}`, {cache:"no-store"});
+    const { data, via } = await fetchJsonPoly(`https://clob.polymarket.com/book?token_id=${encodeURIComponent(tokenId)}`, {cache:"no-store"}, "clob");
     return { book: data, via };
   }
 
