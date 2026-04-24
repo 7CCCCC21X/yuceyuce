@@ -39,6 +39,11 @@ module.exports = async function handler(req, res) {
     if (!mid) { res.status(400).json({ error: "Missing market_id" }); return; }
     if (!INT_ID_RE.test(mid)) { rejectNonNumericId(mid, "market_id"); return; }
     targetUrl = `${base}/markets/${encodeURIComponent(mid)}/orderbook`;
+  } else if (type === "category") {
+    const slug = q.slug || q.categorySlug;
+    if (!slug) { res.status(400).json({ error: "Missing slug" }); return; }
+    if (!SLUG_RE.test(slug)) { res.status(400).json({ error: "Invalid slug" }); return; }
+    targetUrl = `${base}/categories/${encodeURIComponent(slug)}`;
   } else if (type === "market") {
     const mid = q.id || q.market_id;
     if (!mid) { res.status(400).json({ error: "Missing id" }); return; }
@@ -90,7 +95,7 @@ module.exports = async function handler(req, res) {
     if (!INT_ID_RE.test(mid)) { rejectNonNumericId(mid, "market_id"); return; }
     targetUrl = `${base}/markets/${encodeURIComponent(mid)}/last-sale`;
   } else {
-    res.status(400).json({ error: "Invalid type. Use type=book|market|markets|search|stats|last_sale" });
+    res.status(400).json({ error: "Invalid type. Use type=book|market|markets|category|search|stats|last_sale" });
     return;
   }
 
