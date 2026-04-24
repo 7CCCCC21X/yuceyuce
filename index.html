@@ -1253,15 +1253,48 @@ Polymarket Maker：fee/share = 0
   }
 
   async function resolvePredictMarket(slug){
-    const sr = await fetchJsonPredict(`type=search&query=${encodeURIComponent(slug)}`);
-    const markets = collectPredictMarkets(sr);
-    if(!markets.length) throw new Error("搜索没返回 Predict 市场，slug 可能不对");
-    const target = slug.toLowerCase();
-    const byExact = markets.find(m => (m.slug || "").toLowerCase() === target);
-    if(byExact) return byExact;
-    const byContains = markets.find(m => (m.slug || "").toLowerCase().includes(target));
-    if(byContains) return byContains;
-    return markets[0];
+    const tries = [];
+    const spaced = slug.replace(/-/g, " ");
+    if (spaced !== slug) tries.push(spaced);
+    tries.push(slug);
+    const words = slug.split(/[-_/]+/).filter(w => w && w.length >= 2 && !/^\d{4}$/.test(w));
+    if (words.length >= 2){
+      tries.push(words.slice(0, Math.min(4, words.length)).join(" "));
+    }
+
+    let markets = [];
+    let lastQuery = "";
+    for (const q of tries){
+      lastQuery = q;
+      const sr = await fetchJsonPredict(`type=search&query=${encodeURIComponent(q)}`);
+      markets = collectPredictMarkets(sr);
+      if (markets.length) break;
+    }
+    if (!markets.length){
+      throw new Error(`搜索没命中任何 Predict 市场（最后用 "${lastQuery}"），换个链接或 URL 里 slug 可能与站内 question 差得太远`);
+    }
+
+    const slugWords = words.map(w => w.toLowerCase());
+    const score = (m) => {
+      const hay = [
+        (m.slug || ""),
+        (m.title || ""),
+        (m.question || ""),
+        (m.description || "")
+      ].join(" ").toLowerCase();
+      if (!hay) return 0;
+      let s = 0;
+      for (const w of slugWords) if (hay.includes(w)) s += 1;
+      if ((m.slug || "").toLowerCase() === slug.toLowerCase()) s += 100;
+      return s;
+    };
+    const ranked = markets
+      .map(m => ({ m, s: score(m) }))
+      .sort((a, b) => b.s - a.s);
+    if (!ranked.length || ranked[0].s === 0){
+      throw new Error(`找到 ${markets.length} 条结果，但都与 slug 没有关键词重合。请用 DevTools 看一下返回的 title，或换用英文版 URL`);
+    }
+    return ranked[0].m;
   }
 
   function normalizePredictBook(resp){
