@@ -125,10 +125,12 @@
     .costbar-fill.over{background:linear-gradient(90deg,var(--warn),var(--bad));}
     .costbar-mark{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--line-strong);}
     .costbar-legend{display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;}
-    .swapbtn{display:inline-flex;align-items:center;justify-content:center;background:var(--chip);color:var(--sub);border:1px solid var(--line);border-radius:999px;width:36px;height:36px;cursor:pointer;transition:transform .2s ease,border-color .12s ease,color .12s ease;}
-    .swapbtn:hover{border-color:var(--accent);color:var(--accent);}
-    .swapbtn:active{transform:rotate(180deg);}
-    .swap-row{display:flex;justify-content:center;margin:6px 0 -6px;}
+    .swapbtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--chip);color:var(--sub);border:1px dashed var(--line-strong);border-radius:999px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:none;transition:border-color .14s,color .14s,background .14s,transform .14s;}
+    .swapbtn:hover{border-color:var(--accent);color:var(--accent);background:rgba(124,58,237,.10);border-style:solid;}
+    .swapbtn:active{transform:scale(.96);}
+    .swapbtn:active svg{transform:rotate(180deg);transition:transform .2s ease;}
+    .swapbtn svg{width:15px;height:15px;transition:transform .2s ease;}
+    .swap-row{display:flex;justify-content:center;margin:14px 0;}
     .leftover{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;background:rgba(245,158,11,.14);color:var(--warn);border:1px solid rgba(245,158,11,.35);font-size:11px;font-weight:700;}
     @keyframes flash{0%{background:var(--ring)}100%{background:transparent}}
     .flash{animation:flash .6s ease-out;}
@@ -312,17 +314,17 @@
 
   <section class="hero-compact card">
     <h1>双边对冲计算器</h1>
-    <p class="tagline">粘 Polymarket 链接或手动填价，实时算出对冲后是否存在套利空间。支持 Predict.fun / Polymarket · Taker / Maker / 自定义费率。</p>
+    <p class="tagline">粘 Polymarket 链接或手动填价，实时算出两边对冲后的真实净成本和锁定盈亏。支持 Predict.fun / Polymarket · Taker / Maker / 自定义费率。</p>
     <details class="hero-details" id="heroDetails">
       <summary>了解详情 / 使用说明</summary>
       <div class="hero-detail-body">
-        <p>对冲原理：让两边买到相同数量的 shares。因为任一结果赢了都按每 share $1 兑付，所以两边 shares 相同时，不管哪边赢，兑付金额都相同。若两边价格 + 手续费之和低于 $1，就存在正向套利。</p>
+        <p>对冲原理：让两边买到相同数量的 shares。因为任一结果赢了都按每 share $1 兑付，所以两边 shares 相同时，不管哪边赢，兑付金额都相同。若两边价格 + 手续费之和低于 $1，对冲后每 $1 兑付有净收益；高于 $1 就是锁亏对冲（用已知亏损换掉不确定的方向风险）。</p>
         <p><b>对冲公式</b><br>有效单套成本 = 价格 A + 手续费 A/份 + 价格 B + 手续费 B/份<br>应买份额 = 本金 ÷ 有效单套成本</p>
         <div class="tagrow">
           <span class="tag">支持市价 / Taker 手续费</span>
           <span class="tag">支持限价挂单 / Maker 费用</span>
           <span class="tag">可单独选择平台与订单类型</span>
-          <span class="tag">自动判断是否套利</span>
+          <span class="tag">自动判断是锁盈还是锁亏</span>
           <span class="tag">Polymarket 链接一键抓盘</span>
         </div>
       </div>
@@ -434,8 +436,9 @@
       </div>
 
       <div class="swap-row">
-        <button type="button" class="swapbtn" id="swapBtn" aria-label="对调 A 与 B" title="对调 A 与 B">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16"/><path d="M3 8l4-4 4 4"/><path d="M17 20V4"/><path d="M21 16l-4 4-4-4"/></svg>
+        <button type="button" class="swapbtn" id="swapBtn" aria-label="交换 A 与 B 两边所有参数" title="一键交换 A / B 两边的名称、价格、平台和订单类型">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16"/><path d="M3 8l4-4 4 4"/><path d="M17 20V4"/><path d="M21 16l-4 4-4-4"/></svg>
+          <span>交换 A / B</span>
         </button>
       </div>
 
@@ -583,7 +586,7 @@
           <div class="costbar-mark" id="costbarMark" style="left:50%" title="$1 基准线"></div>
         </div>
         <div class="costbar-legend">
-          <span>$0.80（套利线）</span>
+          <span>$0.80（对冲有利润）</span>
           <span>$1.00（打平）</span>
           <span>$1.20（锁亏上限）</span>
         </div>
@@ -676,7 +679,7 @@
           <h3>使用提示</h3>
           <ul>
             <li>市价单可能吃穿订单簿，先把平均成交价填进“买入价”。</li>
-            <li>如果完整一套有效成本大于 $1，这是“锁亏对冲”；低于 $1 才是双边套利。</li>
+            <li>完整一套有效成本 &gt; $1 时是锁亏对冲（确定地付出一个小额成本换方向风险）；&lt; $1 时对冲后每 $1 兑付还有净收益。</li>
             <li>限价挂单未成交前不是完整对冲；只成交一边会留下方向性风险。</li>
           </ul>
         </div>
@@ -940,7 +943,7 @@ Polymarket Maker：fee/share = 0
     fill.classList.toggle("over", unitCost > 1);
     $("costbarMark").style.left = pctMark + "%";
     const label = unitCost < 1
-      ? `套利空间 ${money(1 - unitCost, 4)}/\$1`
+      ? `对冲净赚 ${money(1 - unitCost, 4)}/\$1`
       : unitCost > 1
         ? `锁亏 ${money(unitCost - 1, 4)}/\$1`
         : "恰好打平";
@@ -1182,7 +1185,7 @@ Polymarket Maker：fee/share = 0
     updateCostBar(unitCost);
 
     const arb = unitCost < 1
-      ? "双边套利：每 $1 兑付成本低于 $1"
+      ? "对冲有利润：每 $1 兑付成本低于 $1"
       : unitCost === 1
         ? "刚好打平：不含其他成本"
         : "锁亏对冲：每 $1 兑付成本高于 $1";
@@ -1226,7 +1229,7 @@ Polymarket Maker：fee/share = 0
     const effectiveOver = unitCost - 1;
     const lines = [];
     if(priceSum < 1){
-      lines.push(`不算手续费，价格和 ${money(priceSum,4)} &lt; $1，价格端本身有约 ${money(noFeeProfit,2)} 套利空间。`);
+      lines.push(`不算手续费，价格和 ${money(priceSum,4)} &lt; $1，对冲端本身已有约 ${money(noFeeProfit,2)} 净收益。`);
     }else{
       lines.push(`不算手续费，价格和 ${money(priceSum,4)} ≥ $1，价格端本身已经锁亏 ${money(Math.abs(noFeeProfit),2)}。`);
     }
@@ -1237,9 +1240,9 @@ Polymarket Maker：fee/share = 0
     let status, tagText, amountText, subText;
     if(unitCost < 0.9995){
       status = "good";
-      tagText = "可执行套利";
+      tagText = "对冲可获利";
       amountText = `锁定盈利 +${money(profit,2)}`;
-      subText = `${reasonLine}每 $1 兑付成本低于 $1，存在正向套利空间。执行前确认盘口深度足够，两边市场结算规则一致。`;
+      subText = `${reasonLine}每 $1 兑付成本低于 $1，对冲后仍有净收益。执行前确认盘口深度足够、两边市场结算规则一致。`;
     }else if(unitCost > 1.0005){
       status = "bad";
       tagText = "不建议执行";
@@ -1288,8 +1291,8 @@ Polymarket Maker：fee/share = 0
     if(status !== "good"){
       pbSteps.push({
         warn: true,
-        title: "当前组合不是套利",
-        body: `${reasonLine}下方执行顺序仅作结构参考，是否执行请审慎评估。`
+        title: "当前组合对冲后没有正收益",
+        body: `${reasonLine}下方执行顺序仅作结构参考，是否执行请审慎评估（锁亏对冲只适合已有方向持仓、需要降低波动的场景）。`
       });
     }
     pbSteps.push({
@@ -1324,7 +1327,7 @@ Polymarket Maker：fee/share = 0
         v: bePriceB === null ? "无法持平" : `B 需 ≤ ${cents(bePriceB)}`,
         d: bePriceB === null
           ? "A 价格 + A 手续费已 ≥ $1"
-          : (pB > bePriceB ? `相当于 B 下调 ${cents(pB - bePriceB)}` : "当前 B 已低于持平价，存在套利空间"),
+          : (pB > bePriceB ? `相当于 B 下调 ${cents(pB - bePriceB)}` : "当前 B 已低于持平价，对冲后有净收益"),
         off: bePriceB === null
       },
       {
@@ -1332,7 +1335,7 @@ Polymarket Maker：fee/share = 0
         v: bePriceA === null ? "无法持平" : `A 需 ≤ ${cents(bePriceA)}`,
         d: bePriceA === null
           ? "B 价格 + B 手续费已 ≥ $1"
-          : (pA > bePriceA ? `相当于 A 下调 ${cents(pA - bePriceA)}` : "当前 A 已低于持平价，存在套利空间"),
+          : (pA > bePriceA ? `相当于 A 下调 ${cents(pA - bePriceA)}` : "当前 A 已低于持平价，对冲后有净收益"),
         off: bePriceA === null
       },
       {
