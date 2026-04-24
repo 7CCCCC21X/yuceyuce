@@ -232,11 +232,30 @@
     .bookcard .spread{font-size:11px;color:var(--muted);text-align:center;margin:4px 0;padding:2px 0;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line);}
     .bookcard .empty{color:var(--muted);font-size:11px;text-align:center;padding:6px 0;}
     @media (max-width:480px){ .urlbox-books{grid-template-columns:1fr;} }
+    .playbook{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:8px;}
+    .playbook li{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,rgba(124,58,237,.05),rgba(2,6,23,.14));}
+    :root[data-theme="light"] .playbook li{background:linear-gradient(180deg,rgba(124,58,237,.03),rgba(255,255,255,.7));}
+    .playbook li.warn{border-color:rgba(245,158,11,.40);background:linear-gradient(180deg,rgba(245,158,11,.10),rgba(2,6,23,.14));}
+    :root[data-theme="light"] .playbook li.warn{background:linear-gradient(180deg,rgba(245,158,11,.12),rgba(255,255,255,.8));}
+    .playbook .pb-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;line-height:1.45;}
+    .playbook .pb-body{font-size:12px;color:var(--sub);line-height:1.6;}
+    .playbook b{color:var(--text);font-weight:700;}
+    .mobile-summary{display:none;}
     .hide{display:none;}
     @media (max-width:980px){
       .hero,.grid,.explain{grid-template-columns:1fr}
       .inputs{position:static}
       .summary{grid-template-columns:1fr 1fr}
+      body{padding-bottom:76px;}
+      .mobile-summary{display:block;position:fixed;left:0;right:0;bottom:0;z-index:50;background:rgba(11,18,32,.92);border-top:1px solid var(--line);padding:10px 14px;box-shadow:0 -10px 28px rgba(0,0,0,.28);backdrop-filter:saturate(140%) blur(10px);-webkit-backdrop-filter:saturate(140%) blur(10px);}
+      :root[data-theme="light"] .mobile-summary{background:rgba(255,255,255,.92);box-shadow:0 -8px 20px rgba(15,23,42,.10);}
+      .mobile-summary.good{border-top-color:rgba(16,185,129,.5);}
+      .mobile-summary.bad{border-top-color:rgba(239,68,68,.5);}
+      .mobile-summary.warn{border-top-color:rgba(245,158,11,.5);}
+      .mobile-summary-inner{display:flex;align-items:center;gap:10px;font-size:13px;font-variant-numeric:tabular-nums;}
+      .mobile-summary .verdict-tag{flex-shrink:0;}
+      .mobile-summary .m-profit{font-weight:800;letter-spacing:-.01em;}
+      .mobile-summary .m-cost{margin-left:auto;color:var(--muted);font-size:12px;white-space:nowrap;}
     }
     @media (max-width:620px){
       body{padding:16px 10px 50px}
@@ -599,6 +618,12 @@
         <div class="breakeven" id="breakeven"></div>
       </div>
 
+      <div class="mini" style="margin-top:14px;">
+        <h3>执行方案 <span class="pill" style="margin-left:6px;font-weight:600;">Playbook</span></h3>
+        <p style="font-size:12px;margin-bottom:4px;">按当前价格推荐的下单顺序与最高限价。仅供参考，不构成投资建议。</p>
+        <ol class="playbook" id="playbook"></ol>
+      </div>
+
       <div class="note" id="warningBox">—</div>
 
       <div class="note" style="margin-top:6px;">
@@ -671,6 +696,14 @@
     <a href="https://docs.polymarket.com/concepts/prices-orderbook" target="_blank" rel="noreferrer">Prices & Orderbook</a>。<br>
     免责声明：本页只做仓位和手续费数学计算，不构成投资建议；未纳入盘口深度、滑点、成交失败、链上 gas、充值提现、汇率和平台规则更新等风险。
   </footer>
+</div>
+
+<div class="mobile-summary" id="mobileSummary" role="status" aria-live="polite">
+  <div class="mobile-summary-inner">
+    <span class="verdict-tag small" id="mobTag">—</span>
+    <span class="m-profit" id="mobProfit">—</span>
+    <span class="m-cost" id="mobCost">—</span>
+  </div>
 </div>
 
 <script>
@@ -1198,22 +1231,23 @@ Polymarket Maker：fee/share = 0
     lines.push(`加入手续费后完整一套成本 ${money(unitCost,4)}，每 $1 兑付${effectiveOver>=0 ? "多花" : "少花"} ${money(Math.abs(effectiveOver),4)}。`);
     $("warningBox").innerHTML = lines.join("<br>");
 
+    const reasonLine = `两边价格合计 ${money(priceSum,4)} + 手续费 ${money(fpsA+fpsB,4)}/份 = ${money(unitCost,4)}/份。`;
     let status, tagText, amountText, subText;
     if(unitCost < 0.9995){
       status = "good";
-      tagText = "存在套利空间";
+      tagText = "可执行套利";
       amountText = `锁定盈利 +${money(profit,2)}`;
-      subText = `每 $1 兑付成本为 ${money(unitCost,4)}，低于 $1。需确认两个市场结算规则一致、流动性足够，且实际成交价接近输入。`;
+      subText = `${reasonLine}每 $1 兑付成本低于 $1，存在正向套利空间。执行前确认盘口深度足够，两边市场结算规则一致。`;
     }else if(unitCost > 1.0005){
       status = "bad";
-      tagText = "确定亏损";
+      tagText = "不建议执行";
       amountText = `锁定亏损 −${money(Math.abs(profit),2)}`;
-      subText = `每 $1 兑付成本为 ${money(unitCost,4)}，高于 $1。除非有返点或手续费优惠，否则这组价格不建议执行。`;
+      subText = `${reasonLine}每 $1 兑付成本高于 $1，任一结果都会亏。除非有返点或更好成交价，否则不要执行。`;
     }else{
       status = "warn";
-      tagText = "理论持平";
+      tagText = "接近打平";
       amountText = `约 ${money(profit,2)}`;
-      subText = `每 $1 兑付成本约为 ${money(unitCost,4)}。实际还需考虑滑点、最低下单额和成交失败风险。`;
+      subText = `${reasonLine}每 $1 兑付成本非常接近 $1，最终盈亏由实际成交价和滑点决定。`;
     }
 
     $("verdict").className = "verdict " + status;
@@ -1237,6 +1271,53 @@ Polymarket Maker：fee/share = 0
     $("heroConclusion").textContent = amountText;
     $("heroConclusion").className = "value " + (status === "good" ? "good" : status === "bad" ? "bad" : "");
     $("heroSub").textContent = `每边 ${num(shares,2)} shares · 每 $1 兑付 ${money(unitCost,4)}`;
+
+    const mobEl = $("mobileSummary");
+    if(mobEl){
+      mobEl.className = "mobile-summary " + status;
+      const mTag = $("mobTag");
+      mTag.textContent = tagText;
+      mTag.className = "verdict-tag small " + status;
+      const mP = $("mobProfit");
+      mP.textContent = amountText;
+      mP.className = "m-profit " + (status === "good" ? "good" : status === "bad" ? "bad" : "");
+      $("mobCost").textContent = `成本 ${money(unitCost,4)}`;
+    }
+
+    const firstIsA = a.p <= b.p;
+    const first = firstIsA ? a : b;
+    const second = firstIsA ? b : a;
+    const firstSide = firstIsA ? "A" : "B";
+    const secondSide = firstIsA ? "B" : "A";
+    const maxSecond = solveBreakEvenPrice(firstSide, secondSide);
+    const pbSteps = [];
+    if(status !== "good"){
+      pbSteps.push({
+        warn: true,
+        title: "当前组合不是套利",
+        body: `${reasonLine}下方执行顺序仅作结构参考，是否执行请审慎评估。`
+      });
+    }
+    pbSteps.push({
+      title: `1. 先在 ${platformLabel(first.platform)} 买入 <b>${escapeHtml(first.name)}</b>`,
+      body: `限价 <b>${cents(first.p)}</b>（不要高于此价追单），目标 <b>${num(shares,4)}</b> 份，约 ${money(first.spend,2)}。挂单前确认盘口深度足够。`
+    });
+    pbSteps.push({
+      title: `2. #1 成交后立即在 ${platformLabel(second.platform)} 买入 <b>${escapeHtml(second.name)}</b>`,
+      body: maxSecond === null
+        ? `第二边价格已无法达到持平，继续执行会扩大亏损。`
+        : `最高限价 <b>${cents(maxSecond)}</b>（超过此价立即放弃，不要市价吃穿）。目标 <b>${num(shares,4)}</b> 份，约 ${money(second.spend,2)}。`
+    });
+    pbSteps.push({
+      title: "3. 单边成交的风险上限",
+      body: `若 #2 未按计划成交，你将单边暴露在 <b>${escapeHtml(first.name)}</b> 上；该结果最终失败时最大损失约 ${money(first.spend,2)}。`
+    });
+    $("playbook").innerHTML = pbSteps.map(s => `
+      <li class="${s.warn ? "warn" : ""}">
+        <div class="pb-title">${s.title}</div>
+        <div class="pb-body">${s.body}</div>
+      </li>
+    `).join("");
 
     const bePriceA = solveBreakEvenPrice("B", "A");
     const bePriceB = solveBreakEvenPrice("A", "B");
