@@ -67,8 +67,9 @@
     .tagrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;}
     .tag{background:rgba(124,58,237,.16);color:var(--accent);border:1px solid rgba(124,58,237,.35);padding:7px 10px;border-radius:999px;font-size:13px;font-weight:600;}
     .hero-side{padding:20px;display:flex;flex-direction:column;justify-content:space-between;gap:14px;}
-    .stat{padding:14px;border:1px solid var(--line);border-radius:18px;background:rgba(2,6,23,.42);}
-    .stat .label{font-size:12px;color:var(--muted);margin-bottom:6px;}
+    .stat{padding:14px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,rgba(124,58,237,.06),rgba(2,6,23,.22));}
+    :root[data-theme="light"] .stat{background:linear-gradient(180deg,rgba(124,58,237,.04),rgba(255,255,255,.8));}
+    .stat .label{font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:600;}
     .stat .value{font-size:24px;font-weight:800;letter-spacing:-.02em;}
     .stat .sub{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5;}
     .grid{display:grid;grid-template-columns:360px 1fr;gap:18px;align-items:start;}
@@ -89,15 +90,23 @@
     button.secondary{background:#1f2937;box-shadow:none;border:1px solid var(--line);}
     .actions{display:flex;gap:10px;margin-top:12px;}
     .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
-    .metric{background:rgba(2,6,23,.42);border:1px solid var(--line);border-radius:18px;padding:14px;min-height:96px;}
-    .metric .k{font-size:12px;color:var(--muted);margin-bottom:8px;}
-    .metric .v{font-size:24px;font-weight:900;letter-spacing:-.03em;}
-    .metric .small{font-size:12px;color:var(--muted);margin-top:7px;line-height:1.45;}
-    .costbar{margin:4px 0 16px;padding:14px 16px;border:1px solid var(--line);border-radius:18px;background:rgba(2,6,23,.28);}
-    :root[data-theme="light"] .costbar{background:rgba(15,23,42,.03);}
-    .costbar-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px;font-size:12px;color:var(--muted);}
+    .metric{background:linear-gradient(180deg,rgba(124,58,237,.06),rgba(2,6,23,.18));border:1px solid var(--line);border-radius:18px;padding:14px;min-height:96px;transition:background .2s ease,border-color .2s ease;}
+    :root[data-theme="light"] .metric{background:linear-gradient(180deg,rgba(124,58,237,.04),rgba(255,255,255,.78));}
+    .metric.status-good{border-color:rgba(16,185,129,.42);background:linear-gradient(180deg,rgba(16,185,129,.12),rgba(2,6,23,.18));}
+    .metric.status-bad{border-color:rgba(239,68,68,.42);background:linear-gradient(180deg,rgba(239,68,68,.10),rgba(2,6,23,.18));}
+    .metric.status-warn{border-color:rgba(245,158,11,.40);background:linear-gradient(180deg,rgba(245,158,11,.10),rgba(2,6,23,.18));}
+    :root[data-theme="light"] .metric.status-good{background:linear-gradient(180deg,rgba(16,185,129,.14),rgba(255,255,255,.8));}
+    :root[data-theme="light"] .metric.status-bad{background:linear-gradient(180deg,rgba(239,68,68,.10),rgba(255,255,255,.8));}
+    :root[data-theme="light"] .metric.status-warn{background:linear-gradient(180deg,rgba(245,158,11,.12),rgba(255,255,255,.8));}
+    .metric .k{font-size:12px;color:var(--sub);margin-bottom:8px;font-weight:600;}
+    .metric .v{font-size:24px;font-weight:900;letter-spacing:-.03em;color:var(--text);}
+    .metric .small{font-size:12px;color:var(--muted);margin-top:7px;line-height:1.5;}
+    .costbar{margin:4px 0 16px;padding:14px 16px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,rgba(124,58,237,.05),rgba(2,6,23,.18));}
+    :root[data-theme="light"] .costbar{background:linear-gradient(180deg,rgba(124,58,237,.04),rgba(255,255,255,.72));}
+    .costbar-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px;font-size:12px;color:var(--sub);font-weight:600;}
     .costbar-head b{color:var(--text);font-size:14px;letter-spacing:-.01em;}
-    .costbar-track{position:relative;height:10px;border-radius:999px;background:var(--chip);overflow:hidden;}
+    .costbar-track{position:relative;height:10px;border-radius:999px;background:rgba(148,163,184,.22);overflow:hidden;}
+    :root[data-theme="light"] .costbar-track{background:rgba(15,23,42,.08);}
     .costbar-fill{position:absolute;top:0;left:0;height:100%;border-radius:999px;transition:width .35s ease, background .25s ease;background:linear-gradient(90deg,var(--good),var(--accent));}
     .costbar-fill.over{background:linear-gradient(90deg,var(--warn),var(--bad));}
     .costbar-mark{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--line-strong);}
@@ -114,20 +123,65 @@
     .good{color:var(--good)!important}
     .bad{color:var(--bad)!important}
     .warn{color:var(--warn)!important}
-    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:18px;background:rgba(2,6,23,.22);}
-    table{width:100%;border-collapse:collapse;min-width:760px;}
+    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,rgba(124,58,237,.04),rgba(2,6,23,.12));}
+    :root[data-theme="light"] .table-wrap{background:linear-gradient(180deg,rgba(124,58,237,.03),rgba(255,255,255,.7));}
+    table{width:100%;border-collapse:collapse;}
     th,td{padding:12px 12px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;vertical-align:top;}
     th:first-child,td:first-child{text-align:left;}
     th{font-size:12px;color:var(--sub);background:var(--chip);position:sticky;top:0;}
     tr:last-child td{border-bottom:0;}
-    .note{background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.30);padding:12px 14px;border-radius:16px;color:#fde68a;font-size:13px;line-height:1.65;margin:14px 0;}
+    .note{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);padding:12px 14px;border-radius:16px;color:#fbbf24;font-size:13px;line-height:1.65;margin:14px 0;}
+    :root[data-theme="light"] .note{background:rgba(245,158,11,.12);color:#78350f;border-color:rgba(245,158,11,.45);}
     .explain{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;}
-    .mini{padding:15px;border:1px solid var(--line);border-radius:18px;background:rgba(2,6,23,.28);}
-    .mini ul{margin:8px 0 0;padding-left:18px;color:var(--muted);line-height:1.65;font-size:13px;}
+    .mini{padding:15px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,rgba(124,58,237,.05),rgba(2,6,23,.16));}
+    :root[data-theme="light"] .mini{background:linear-gradient(180deg,rgba(124,58,237,.03),rgba(255,255,255,.72));}
+    .mini ul{margin:8px 0 0;padding-left:18px;color:var(--sub);line-height:1.65;font-size:13px;}
     .formula{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;background:var(--chip);border:1px solid var(--line);padding:10px;border-radius:12px;color:var(--accent);font-size:12px;line-height:1.65;white-space:pre-wrap;}
     footer{margin-top:18px;padding:18px;border:1px solid var(--line);border-radius:20px;background:rgba(2,6,23,.34);color:var(--muted);font-size:12px;line-height:1.7;}
     footer a{color:var(--accent);text-decoration:none;}
     footer a:hover{text-decoration:underline;}
+    .verdict{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;padding:18px 20px;border-radius:20px;border:1px solid var(--line);background:rgba(2,6,23,.30);margin-bottom:16px;transition:background .2s ease,border-color .2s ease;}
+    :root[data-theme="light"] .verdict{background:rgba(15,23,42,.03);}
+    .verdict.good{border-color:rgba(16,185,129,.40);background:rgba(16,185,129,.09);}
+    .verdict.bad{border-color:rgba(239,68,68,.40);background:rgba(239,68,68,.09);}
+    .verdict.warn{border-color:rgba(245,158,11,.40);background:rgba(245,158,11,.09);}
+    .verdict-main{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .verdict-amount{font-size:28px;font-weight:900;letter-spacing:-.03em;line-height:1.15;}
+    .verdict-sub{font-size:13px;color:var(--sub);line-height:1.55;}
+    .verdict-side{text-align:right;min-width:120px;}
+    .verdict-side .k{font-size:11px;color:var(--muted);margin-bottom:4px;}
+    .verdict-side .v{font-size:20px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+    .verdict-tag{display:inline-block;font-size:12px;font-weight:800;padding:6px 11px;border-radius:999px;border:1px solid transparent;line-height:1;white-space:nowrap;}
+    .verdict-tag.good{background:rgba(16,185,129,.18);color:var(--good);border-color:rgba(16,185,129,.45);}
+    .verdict-tag.bad{background:rgba(239,68,68,.16);color:var(--bad);border-color:rgba(239,68,68,.45);}
+    .verdict-tag.warn{background:rgba(245,158,11,.18);color:var(--warn);border-color:rgba(245,158,11,.45);}
+    .verdict-tag.small{font-size:11px;padding:4px 9px;}
+    .hero-stat{transition:background .2s ease,border-color .2s ease;}
+    .hero-stat.good{background:rgba(16,185,129,.10);border-color:rgba(16,185,129,.40);}
+    .hero-stat.bad{background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.40);}
+    .hero-stat.warn{background:rgba(245,158,11,.10);border-color:rgba(245,158,11,.40);}
+    .hero-stat .label{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+    .hint{display:block;font-size:11px;color:var(--muted);margin:-3px 0 7px;line-height:1.5;font-weight:500;}
+    .datechip{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--sub);background:var(--chip);border:1px solid var(--line);padding:4px 9px;border-radius:999px;font-weight:600;margin-left:8px;}
+    .datechip .dotmark{width:6px;height:6px;border-radius:50%;background:var(--good);box-shadow:0 0 0 3px rgba(16,185,129,.18);}
+    .table-head{display:flex;justify-content:space-between;align-items:center;margin:4px 0 10px;gap:10px;}
+    .table-head h3{margin:0;}
+    .ghostbtn{background:var(--chip);color:var(--sub);border:1px solid var(--line);border-radius:12px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;transition:border-color .12s ease,color .12s ease;}
+    .ghostbtn:hover{border-color:var(--accent);color:var(--accent);}
+    .table-wrap:not(.expanded) .ext{display:none;}
+    .table-wrap.expanded table{min-width:760px;}
+    .breakeven{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px;}
+    .beitem{padding:12px;border-radius:14px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(124,58,237,.05),rgba(2,6,23,.14));}
+    :root[data-theme="light"] .beitem{background:linear-gradient(180deg,rgba(124,58,237,.03),rgba(255,255,255,.72));}
+    .beitem .k{font-size:11px;color:var(--sub);font-weight:600;margin-bottom:6px;}
+    .beitem .v{font-size:18px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+    .beitem .delta{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5;}
+    .beitem.none{opacity:.55;}
+    .risklist{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:6px;}
+    .risklist li{position:relative;padding:4px 0 4px 20px;font-size:13px;line-height:1.6;color:var(--sub);}
+    .risklist li::before{content:"";position:absolute;left:4px;top:11px;width:6px;height:6px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 3px rgba(245,158,11,.18);}
+    :root[data-theme="light"] .risklist li{color:#78350f;}
+    .copy-actions{display:flex;gap:8px;flex-wrap:wrap;}
     .hide{display:none;}
     @media (max-width:980px){
       .hero,.grid,.explain{grid-template-columns:1fr}
@@ -140,6 +194,14 @@
       h1{font-size:25px}
       .hero-main,.hero-side,.inputs,.results{padding:16px}
       .actions{flex-direction:column}
+      .verdict{grid-template-columns:1fr;text-align:left;}
+      .verdict-side{text-align:left;}
+      .verdict-amount{font-size:24px;}
+      .breakeven{grid-template-columns:1fr;}
+      .table-wrap table{min-width:0;}
+      .table-wrap.expanded{overflow-x:auto;}
+      .table-wrap th,.table-wrap td{padding:10px 8px;font-size:12px;}
+      .table-head{flex-wrap:wrap;}
     }
   </style>
 </head>
@@ -175,8 +237,8 @@
       </div>
     </div>
     <div class="hero-side card">
-      <div class="stat">
-        <div class="label">当前示例结论</div>
+      <div class="stat hero-stat" id="heroStat">
+        <div class="label"><span class="verdict-tag small" id="heroTag">计算中</span></div>
         <div class="value" id="heroConclusion">—</div>
         <div class="sub" id="heroSub">输入价格与订单类型后自动更新。</div>
       </div>
@@ -194,10 +256,12 @@
       <div class="row">
         <div>
           <label for="bankroll">本金，USDT/USDC</label>
+          <small class="hint">整笔对冲预算，两边总花费上限。</small>
           <input id="bankroll" type="number" step="0.01" min="0" value="1000" inputmode="decimal">
         </div>
         <div>
           <label for="roundShares">份额处理</label>
+          <small class="hint">允许小数用于理论计算；整数更接近实际下单。</small>
           <select id="roundShares">
             <option value="none">允许小数份额</option>
             <option value="floor">向下取整</option>
@@ -215,6 +279,7 @@
           </div>
           <div>
             <label for="priceA">买入价，¢</label>
+            <small class="hint">0–100 之间，13 表示 $0.13。</small>
             <input id="priceA" type="number" step="0.01" min="0" max="100" value="13" inputmode="decimal">
           </div>
         </div>
@@ -230,6 +295,7 @@
           </div>
           <div>
             <label for="orderA">订单</label>
+            <small class="hint">市价按 Taker 费；挂单按 Maker（未成交前不是完整对冲）。</small>
             <select id="orderA">
               <option value="taker">市价 / 立即成交（Taker）</option>
               <option value="maker">限价挂单 / 等别人吃单（Maker）</option>
@@ -277,6 +343,7 @@
           </div>
           <div>
             <label for="priceB">买入价，¢</label>
+            <small class="hint">0–100 之间，88 表示 $0.88。</small>
             <input id="priceB" type="number" step="0.01" min="0" max="100" value="88" inputmode="decimal">
           </div>
         </div>
@@ -292,6 +359,7 @@
           </div>
           <div>
             <label for="orderB">订单</label>
+            <small class="hint">市价按 Taker 费；挂单按 Maker（未成交前不是完整对冲）。</small>
             <select id="orderB">
               <option value="taker">市价 / 立即成交（Taker）</option>
               <option value="maker">限价挂单 / 等别人吃单（Maker）</option>
@@ -324,28 +392,45 @@
       </div>
 
       <div class="leg">
-        <div class="leg-title"><h3>Predict.fun 参数</h3><span class="pill">全局</span></div>
+        <div class="leg-title">
+          <h3>Predict.fun 参数</h3>
+          <span class="datechip"><span class="dotmark"></span>费率口径：官方文档 2026-01</span>
+        </div>
         <div class="row">
           <div>
             <label for="predictBase">Taker Base Fee，%</label>
+            <small class="hint">Predict.fun Taker 费率上限，官方文档为 2%。</small>
             <input id="predictBase" type="number" step="0.01" min="0" max="100" value="2" inputmode="decimal">
           </div>
           <div>
             <label for="predictDiscount">手续费折扣，%</label>
+            <small class="hint">邀请返点常见 10%，无折扣填 0。</small>
             <input id="predictDiscount" type="number" step="1" min="0" max="100" value="0" inputmode="decimal">
           </div>
         </div>
-        <p style="font-size:12px">Predict.fun 邀请折扣常见为 10%，没有折扣填 0。</p>
       </div>
 
       <div class="actions">
         <button type="button" id="resetBtn">恢复截图示例</button>
         <button type="button" class="secondary" id="copyBtn">复制结果</button>
+        <button type="button" class="secondary" id="copyMdBtn">Markdown</button>
       </div>
     </aside>
 
     <main class="results card">
       <h2>结果</h2>
+
+      <div class="verdict" id="verdict" aria-live="polite">
+        <span class="verdict-tag" id="verdictTag">—</span>
+        <div class="verdict-main">
+          <div class="verdict-amount" id="verdictAmount">—</div>
+          <div class="verdict-sub" id="verdictSub">—</div>
+        </div>
+        <div class="verdict-side">
+          <div class="k">每 $1 兑付成本</div>
+          <div class="v" id="verdictCost">—</div>
+        </div>
+      </div>
 
       <div class="summary">
         <div class="metric">
@@ -389,25 +474,48 @@
         </div>
       </div>
 
-      <div class="table-wrap">
+      <div class="table-head">
+        <h3>两边明细</h3>
+        <button type="button" class="ghostbtn" id="tableToggleBtn" aria-expanded="false">展开明细</button>
+      </div>
+      <div class="table-wrap" id="legTableWrap">
         <table>
           <thead>
           <tr>
             <th>结果</th>
-            <th>平台 / 订单</th>
+            <th class="ext">平台 / 订单</th>
             <th>买入价</th>
-            <th>份额</th>
-            <th>成交额</th>
-            <th>手续费</th>
+            <th>应买份额</th>
+            <th class="ext">成交额</th>
+            <th class="ext">手续费</th>
             <th>实际花费</th>
-            <th>单份手续费</th>
+            <th class="ext">单份手续费</th>
           </tr>
           </thead>
           <tbody id="legTable"></tbody>
         </table>
       </div>
 
+      <div class="mini" style="margin-top:14px;">
+        <h3>盈亏平衡反推</h3>
+        <p style="font-size:12px;margin-bottom:4px;">保留其他条件不变时，需要调到多少才能每 $1 兑付刚好打平。</p>
+        <div class="breakeven" id="breakeven"></div>
+      </div>
+
       <div class="note" id="warningBox">—</div>
+
+      <div class="note" style="margin-top:6px;">
+        <b>执行前请确认：</b>
+        <ul class="risklist">
+          <li>两个市场是否对应同一事件，结算条件完全一致。</li>
+          <li>当前订单簿深度是否够吃掉计划仓位，避免吃穿。</li>
+          <li>大单请把平均成交价填入"买入价"，不要只用盘口价。</li>
+          <li>平台最低下单额、最小份额单位可能让两边无法同时按计划成交。</li>
+          <li>限价挂单未成交前不是完整对冲，单边成交会暴露方向风险。</li>
+          <li>Predict.fun ↔ Polymarket 间的充值、提现、链上 gas、汇率成本需自行加回。</li>
+          <li>手续费规则可能随时更新，以官方文档为准。</li>
+        </ul>
+      </div>
 
       <div class="explain">
         <div class="mini">
@@ -611,8 +719,8 @@
     $("polyRate"+side).value = $("polyCat"+side).value;
   }
 
-  function feePerShare(side, overrideOrder=null){
-    const p = Math.min(0.999999, readNum("price"+side)/100);
+  function feePerShareAt(side, priceFraction, overrideOrder=null){
+    const p = Math.min(0.999999, Math.max(0, priceFraction));
     const platform = $("platform"+side).value;
     const order = overrideOrder || $("order"+side).value;
 
@@ -632,6 +740,24 @@
     const percent = readNum("customFee"+side) / 100;
     const fixed = readNum("customFeePerShare"+side);
     return percent * p + fixed;
+  }
+
+  function feePerShare(side, overrideOrder=null){
+    return feePerShareAt(side, readNum("price"+side)/100, overrideOrder);
+  }
+
+  function solveBreakEvenPrice(fixedSide, solveSide){
+    const pFixed = readNum("price"+fixedSide)/100;
+    const fpsFixed = feePerShare(fixedSide);
+    const budget = 1 - pFixed - fpsFixed;
+    if(budget <= 0) return null;
+    let lo = 0, hi = Math.min(0.9999, budget);
+    for(let i=0; i<60; i++){
+      const mid = (lo+hi)/2;
+      const uc = pFixed + fpsFixed + mid + feePerShareAt(solveSide, mid);
+      if(uc < 1) lo = mid; else hi = mid;
+    }
+    return lo;
   }
 
   function legData(side, shares){
@@ -726,9 +852,10 @@ Polymarket Maker：fee/share = 0
     const sharesTxt = num(shares, 4) + (floored ? ` <span class="leftover">未使用 ${money(leftover,2)}</span>` : "");
     setHtml("sharesEach", sharesTxt);
     setText("payoutAny", money(payout, 2));
-    setText("profitAny", money(profit, 2));
+    setText("profitAny", (profit >= 0 ? "+" : "−") + money(Math.abs(profit), 2));
     $("profitAny").className = "v " + (profit >= 0 ? "good" : "bad");
-    setText("roiAny", "ROI：" + pct(roi, 3) + "；实际总花费 " + money(totalSpend,2));
+    const roiSign = roi > 0 ? "+" : "";
+    setText("roiAny", `ROI ${roiSign}${pct(roi, 2)} · 实际花费 ${money(totalSpend,2)}`);
     setText("setCost", money(unitCost, 4));
     updateCostBar(unitCost);
 
@@ -744,13 +871,13 @@ Polymarket Maker：fee/share = 0
     $("legTable").innerHTML = [a,b].map(x => `
       <tr>
         <td><b>${escapeHtml(x.name)}</b></td>
-        <td>${platformLabel(x.platform)}<br><span class="muted-text">${orderLabel(x.order)}</span></td>
+        <td class="ext">${platformLabel(x.platform)}<br><span class="muted-text">${orderLabel(x.order)}</span></td>
         <td>${cents(x.p)}</td>
         <td>${num(x.shares,4)}</td>
-        <td>${money(x.notional,2)}</td>
-        <td>${money(x.fee,4)}</td>
+        <td class="ext">${money(x.notional,2)}</td>
+        <td class="ext">${money(x.fee,4)}</td>
         <td><b>${money(x.spend,2)}</b></td>
-        <td>${money(x.fps,6)}</td>
+        <td class="ext">${money(x.fps,4)}</td>
       </tr>`).join("");
 
     const compRows = ["A","B"].map(side => {
@@ -775,26 +902,112 @@ Polymarket Maker：fee/share = 0
     $("formulaBox").textContent = formulaText();
 
     const effectiveOver = unitCost - 1;
+    const lines = [];
+    if(priceSum < 1){
+      lines.push(`不算手续费，价格和 ${money(priceSum,4)} &lt; $1，价格端本身有约 ${money(noFeeProfit,2)} 套利空间。`);
+    }else{
+      lines.push(`不算手续费，价格和 ${money(priceSum,4)} ≥ $1，价格端本身已经锁亏 ${money(Math.abs(noFeeProfit),2)}。`);
+    }
+    lines.push(`加入手续费后完整一套成本 ${money(unitCost,4)}，每 $1 兑付${effectiveOver>=0 ? "多花" : "少花"} ${money(Math.abs(effectiveOver),4)}。`);
+    $("warningBox").innerHTML = lines.join("<br>");
 
-    const sumStatus = priceSum < 1
-      ? `不算手续费，价格和为 ${money(priceSum,4)}，理论上有套利空间：约 ${money(noFeeProfit,2)} / ${money(bankroll,0)}。`
-      : `不算手续费，价格和为 ${money(priceSum,4)}，已经高于 $1；只做对冲会锁定约 ${money(noFeeProfit,2)}。`;
+    let status, tagText, amountText, subText;
+    if(unitCost < 0.9995){
+      status = "good";
+      tagText = "存在套利空间";
+      amountText = `锁定盈利 +${money(profit,2)}`;
+      subText = `每 $1 兑付成本为 ${money(unitCost,4)}，低于 $1。需确认两个市场结算规则一致、流动性足够，且实际成交价接近输入。`;
+    }else if(unitCost > 1.0005){
+      status = "bad";
+      tagText = "确定亏损";
+      amountText = `锁定亏损 −${money(Math.abs(profit),2)}`;
+      subText = `每 $1 兑付成本为 ${money(unitCost,4)}，高于 $1。除非有返点或手续费优惠，否则这组价格不建议执行。`;
+    }else{
+      status = "warn";
+      tagText = "理论持平";
+      amountText = `约 ${money(profit,2)}`;
+      subText = `每 $1 兑付成本约为 ${money(unitCost,4)}。实际还需考虑滑点、最低下单额和成交失败风险。`;
+    }
 
-    const makerWarn = (a.order === "maker" || b.order === "maker")
-      ? "你选择了限价挂单/Maker：手续费按 0 算，但挂单未成交前不是完整对冲；只成交一边会暴露方向风险。"
-      : "";
+    $("verdict").className = "verdict " + status;
+    const vTag = $("verdictTag");
+    vTag.textContent = tagText;
+    vTag.className = "verdict-tag " + status;
+    $("verdictAmount").textContent = amountText;
+    $("verdictAmount").className = "verdict-amount " + (status === "good" ? "good" : status === "bad" ? "bad" : "");
+    $("verdictSub").textContent = subText;
+    $("verdictCost").textContent = money(unitCost, 4);
 
-    const takerWarn = (a.order !== "maker" || b.order !== "maker")
-      ? "市价/Taker 会产生手续费，且可能有滑点；大单应把订单簿的平均成交价填进买入价。"
-      : "";
+    const setCostMetric = $("setCost").closest(".metric");
+    const profitMetric = $("profitAny").closest(".metric");
+    if(setCostMetric) setCostMetric.className = "metric status-" + status;
+    if(profitMetric) profitMetric.className = "metric status-" + status;
 
-    $("warningBox").innerHTML = `${sumStatus}<br>算上当前手续费后，完整一套成本为 ${money(unitCost,4)}，等于每 $1 兑付${effectiveOver>=0 ? "多花" : "少花"} ${money(Math.abs(effectiveOver),4)}。${makerWarn ? "<br>"+makerWarn : ""}${takerWarn ? "<br>"+takerWarn : ""}`;
+    $("heroStat").className = "stat hero-stat " + status;
+    const hTag = $("heroTag");
+    hTag.textContent = tagText;
+    hTag.className = "verdict-tag small " + status;
+    $("heroConclusion").textContent = amountText;
+    $("heroConclusion").className = "value " + (status === "good" ? "good" : status === "bad" ? "bad" : "");
+    $("heroSub").textContent = `每边 ${num(shares,2)} shares · 每 $1 兑付 ${money(unitCost,4)}`;
 
-    $("heroConclusion").textContent = profit >= 0 ? `锁盈 ${money(profit,2)}` : `锁亏 ${money(Math.abs(profit),2)}`;
-    $("heroConclusion").className = "value " + (profit >= 0 ? "good" : "bad");
-    $("heroSub").textContent = `每边买 ${num(shares,2)} shares；${a.name} 花 ${money(a.spend,2)}，${b.name} 花 ${money(b.spend,2)}。`;
+    const bePriceA = solveBreakEvenPrice("B", "A");
+    const bePriceB = solveBreakEvenPrice("A", "B");
+    const feeBudget = Math.max(0, 1 - pA - pB);
+    const totalFpsNow = fpsA + fpsB;
 
-    window.lastResultText = `双边对冲结果：每边买 ${num(shares,4)} shares。${a.name} 花费 ${money(a.spend,2)}（成交额 ${money(a.notional,2)}，手续费 ${money(a.fee,4)}）；${b.name} 花费 ${money(b.spend,2)}（成交额 ${money(b.notional,2)}，手续费 ${money(b.fee,4)}）。任一赛果兑付 ${money(payout,2)}，锁定${profit>=0?"收益":"亏损"} ${money(Math.abs(profit),2)}，ROI ${pct(roi,3)}。`;
+    const beItems = [
+      {
+        k: `A 保持 ${cents(pA)}`,
+        v: bePriceB === null ? "无法持平" : `B 需 ≤ ${cents(bePriceB)}`,
+        d: bePriceB === null
+          ? "A 价格 + A 手续费已 ≥ $1"
+          : (pB > bePriceB ? `相当于 B 下调 ${cents(pB - bePriceB)}` : "当前 B 已低于持平价，存在套利空间"),
+        off: bePriceB === null
+      },
+      {
+        k: `B 保持 ${cents(pB)}`,
+        v: bePriceA === null ? "无法持平" : `A 需 ≤ ${cents(bePriceA)}`,
+        d: bePriceA === null
+          ? "B 价格 + B 手续费已 ≥ $1"
+          : (pA > bePriceA ? `相当于 A 下调 ${cents(pA - bePriceA)}` : "当前 A 已低于持平价，存在套利空间"),
+        off: bePriceA === null
+      },
+      {
+        k: "若两边价格不变",
+        v: feeBudget > 0 ? `总手续费 ≤ ${money(feeBudget,4)}/份` : "无手续费预算",
+        d: `当前 feeA + feeB = ${money(totalFpsNow,4)}/份`,
+        off: feeBudget <= 0
+      }
+    ];
+    $("breakeven").innerHTML = beItems.map(it => `
+      <div class="beitem${it.off ? ' none' : ''}">
+        <div class="k">${escapeHtml(it.k)}</div>
+        <div class="v">${escapeHtml(it.v)}</div>
+        <div class="delta">${escapeHtml(it.d)}</div>
+      </div>
+    `).join("");
+
+    const profitPrefix = profit >= 0 ? "+" : "−";
+    const roiText = `${roi>0?"+":""}${pct(roi,2)}`;
+
+    window.lastResultText = `双边对冲结果：状态 ${tagText}；每边买 ${num(shares,4)} shares；${a.name} 花 ${money(a.spend,2)}（手续费 ${money(a.fee,4)}），${b.name} 花 ${money(b.spend,2)}（手续费 ${money(b.fee,4)}）；任一赛果兑付 ${money(payout,2)}；锁定${profit>=0?"盈利":"亏损"} ${profitPrefix}${money(Math.abs(profit),2)}；ROI ${roiText}；每 $1 成本 ${money(unitCost,4)}。`;
+
+    window.lastResultMd = [
+      `## 双边对冲结果`,
+      ``,
+      `- 状态：**${tagText}**`,
+      `- 锁定${profit>=0?"盈利":"亏损"}：${profitPrefix}${money(Math.abs(profit),2)}`,
+      `- 每 $1 兑付成本：${money(unitCost,4)}`,
+      `- ROI：${roiText}`,
+      ``,
+      `| 结果 | 平台 / 订单 | 买入价 | 应买份额 | 手续费 | 实际花费 |`,
+      `|---|---|---|---|---|---|`,
+      `| ${a.name} | ${platformLabel(a.platform)} · ${orderLabel(a.order)} | ${cents(a.p)} | ${num(a.shares,4)} | ${money(a.fee,4)} | ${money(a.spend,2)} |`,
+      `| ${b.name} | ${platformLabel(b.platform)} · ${orderLabel(b.order)} | ${cents(b.p)} | ${num(b.shares,4)} | ${money(b.fee,4)} | ${money(b.spend,2)} |`,
+      ``,
+      `任一赛果兑付 ${money(payout,2)} · 总花费 ${money(totalSpend,2)}`
+    ].join("\n");
   }
 
   function escapeHtml(s){
@@ -941,6 +1154,24 @@ Polymarket Maker：fee/share = 0
       }catch(e){
         alert(window.lastResultText || "暂无结果");
       }
+    });
+
+    $("copyMdBtn").addEventListener("click", async () => {
+      try{
+        await navigator.clipboard.writeText(window.lastResultMd || "");
+        $("copyMdBtn").textContent = "已复制";
+        setTimeout(() => $("copyMdBtn").textContent = "Markdown", 1200);
+      }catch(e){
+        alert(window.lastResultMd || "暂无结果");
+      }
+    });
+
+    $("tableToggleBtn").addEventListener("click", () => {
+      const wrap = $("legTableWrap");
+      const btn = $("tableToggleBtn");
+      const expanded = wrap.classList.toggle("expanded");
+      btn.textContent = expanded ? "收起明细" : "展开明细";
+      btn.setAttribute("aria-expanded", expanded ? "true" : "false");
     });
 
     reset();
