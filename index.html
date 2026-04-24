@@ -469,6 +469,10 @@
     .size-bar input,.size-bar select{padding:8px 10px;font-size:13px;}
     .size-bar .size-bankroll input{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;}
     @media (max-width:700px){ .size-bar{grid-template-columns:1fr;} }
+    .presets-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 12px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:transparent;}
+    .presets-row .presets-label{font-size:11px;color:var(--muted);font-weight:600;margin-right:4px;}
+    .presets-row .preset-chip{padding:5px 10px;font-size:12px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--sub);cursor:pointer;font-family:inherit;font-weight:600;transition:all .12s ease;}
+    .presets-row .preset-chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(124,58,237,.06);}
 
     /* Drop inputs card H2 since sections are labeled already */
     .inputs > h2{display:none;}
@@ -639,6 +643,15 @@
     </div>
   </div>
 
+  <div class="presets-row" role="group" aria-label="常用场景预设">
+    <span class="presets-label">预设</span>
+    <button type="button" class="preset-chip" data-preset="predict-taker">双 Predict · Taker</button>
+    <button type="button" class="preset-chip" data-preset="predict-taker-10">Predict · Taker · 10% 返点</button>
+    <button type="button" class="preset-chip" data-preset="poly-taker">双 Polymarket · Sports</button>
+    <button type="button" class="preset-chip" data-preset="both-maker">两边 Maker（挂单）</button>
+    <button type="button" class="preset-chip" data-preset="cross">Predict × Polymarket</button>
+  </div>
+
   <div id="arbBanner" class="arb-banner hide" aria-live="polite">
     <div class="arb-group"><span class="arb-lbl jargon" title="买一份 Yes+No 对冲组合的总成本：两边买入价 + 两边手续费。小于 $1 = 对冲有利润；大于 $1 = 锁亏">成本</span><span class="arb-val" id="arbUnit">—</span></div>
     <div class="arb-group"><span class="arb-lbl jargon" title="投入回报率：(兑付金额 − 总花费) ÷ 总花费">ROI</span><span class="arb-val" id="arbRoi">—</span></div>
@@ -719,19 +732,6 @@
 
     <aside class="inputs card">
       <h2>输入</h2>
-
-      <details class="collapse">
-        <summary>预设组合</summary>
-        <div class="dbody">
-          <div class="presets" role="group" aria-label="常用场景预设">
-            <button type="button" class="preset-chip" data-preset="predict-taker">双 Predict · Taker</button>
-            <button type="button" class="preset-chip" data-preset="predict-taker-10">Predict · Taker · 10% 返点</button>
-            <button type="button" class="preset-chip" data-preset="poly-taker">双 Polymarket · Sports</button>
-            <button type="button" class="preset-chip" data-preset="both-maker">两边 Maker（挂单）</button>
-            <button type="button" class="preset-chip" data-preset="cross">Predict × Polymarket</button>
-          </div>
-        </div>
-      </details>
 
       <div class="legs-grid">
       <div class="leg leg-a">
