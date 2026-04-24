@@ -80,8 +80,8 @@
     .stat .value{font-size:24px;font-weight:800;letter-spacing:-.02em;}
     .stat .sub{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5;}
     .grid{display:flex;flex-direction:column;gap:16px;align-items:stretch;}
-    .grid > main.results{order:1;}
-    .grid > .platforms-grid{order:2;}
+    .grid > .platforms-grid{order:1;}
+    .grid > main.results{order:2;}
     .grid > aside.inputs{order:3;}
     .platforms-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
     @media (max-width:900px){ .platforms-grid{grid-template-columns:1fr;} }
@@ -572,25 +572,6 @@
       </button>
     </div>
   </header>
-
-  <section class="hero-compact card">
-    <h1>双边对冲计算器</h1>
-    <p class="tagline">粘 Polymarket 链接或手动填价，实时算出两边对冲后的真实净成本和锁定盈亏。支持 Predict.fun / Polymarket · Taker / Maker / 自定义费率。</p>
-    <details class="hero-details" id="heroDetails">
-      <summary>了解详情 / 使用说明</summary>
-      <div class="hero-detail-body">
-        <p>对冲原理：让两边买到相同数量的 shares。因为任一结果赢了都按每 share $1 兑付，所以两边 shares 相同时，不管哪边赢，兑付金额都相同。若两边价格 + 手续费之和低于 $1，对冲后每 $1 兑付有净收益；高于 $1 就是锁亏对冲（用已知亏损换掉不确定的方向风险）。</p>
-        <p><b>对冲公式</b><br>有效单套成本 = 价格 A + 手续费 A/份 + 价格 B + 手续费 B/份<br>应买份额 = 本金 ÷ 有效单套成本</p>
-        <div class="tagrow">
-          <span class="tag">支持市价 / Taker 手续费</span>
-          <span class="tag">支持限价挂单 / Maker 费用</span>
-          <span class="tag">可单独选择平台与订单类型</span>
-          <span class="tag">自动判断是锁盈还是锁亏</span>
-          <span class="tag">Polymarket 链接一键抓盘</span>
-        </div>
-      </div>
-    </details>
-  </section>
 
   <div class="size-bar">
     <div class="size-cell size-bankroll">
