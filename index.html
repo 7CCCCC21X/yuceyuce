@@ -433,6 +433,16 @@
     .leg.leg-b .leg-title h3{color:var(--good);}
     .leg-title h3{font-size:13px;letter-spacing:.02em;font-weight:700;}
 
+    /* Cross-platform pairing candidates */
+    .pair-cands{margin-top:8px;font-size:12px;}
+    .pair-cands.hide{display:none;}
+    .pair-cands .pair-cand-head{color:var(--muted);font-size:11px;margin-bottom:6px;}
+    .pair-cands .pair-cand-list{display:flex;flex-direction:column;gap:4px;}
+    .pair-cand{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--text);font-size:12px;cursor:pointer;text-align:left;width:100%;font-family:inherit;}
+    .pair-cand:hover{border-color:var(--accent);background:rgba(124,58,237,.06);}
+    .pair-cand .pc-score{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;min-width:34px;font-size:11.5px;}
+    .pair-cand .pc-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
     /* Per-leg book strip — shows source orderbook summary inline */
     .leg-book{margin:0 0 10px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);font-size:11.5px;background:transparent;}
     .leg-book.hide{display:none;}
@@ -564,6 +574,7 @@
         </div>
         <div id="urlStatus" class="urlbox-status">粘贴 Polymarket 事件链接 → 自动填 A/B 两侧 VWAP 价。</div>
         <div id="marketPicker" class="market-picker hide"></div>
+        <div id="polyPairCandidates" class="pair-cands hide"></div>
         <div id="urlBooks" class="urlbox-books" hidden></div>
       </div>
 
@@ -578,6 +589,7 @@
         </div>
         <div id="predictStatus" class="urlbox-status">粘贴 Predict.fun 链接 → 选子市场 → 填入 A/B。</div>
         <div id="predictMarketPicker" class="market-picker hide"></div>
+        <div id="predictPairCandidates" class="pair-cands hide"></div>
         <div id="predictBooks" class="urlbox-books" hidden></div>
       </div>
 
@@ -1223,6 +1235,77 @@ Polymarket Maker：fee/share = 0
     }catch(_){ return null; }
   }
 
+  // Cross-platform pairing helpers ────────────────────────────────────────
+  function tokenizeQuery(s){
+    return String(s || "")
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+      .split(/\s+/).filter(w => w.length >= 2 && !/^\d{4}$/.test(w) && !["the","and","for","will","does","is","be","by","on","in","to","of","at","a","an"].includes(w));
+  }
+
+  function pairScore(query, candidate){
+    const qt = new Set(tokenizeQuery(query));
+    const ct = new Set(tokenizeQuery(candidate));
+    if(!qt.size || !ct.size) return 0;
+    let hit = 0;
+    qt.forEach(t => { if(ct.has(t)) hit += 1; });
+    return hit / Math.max(qt.size, ct.size);
+  }
+
+  async function searchPolyEventsByText(query){
+    if(!query) return [];
+    try{
+      const { data } = await fetchJsonPoly(`type=search&q=${encodeURIComponent(query.slice(0,120))}`);
+      const evs = Array.isArray(data?.events) ? data.events : (Array.isArray(data) ? data : []);
+      return evs.map(e => ({
+        slug: e.slug,
+        title: e.title || e.question || e.slug,
+        endDate: e.endDate || e.end_date_iso || null,
+        score: pairScore(query, e.title || e.question || e.slug),
+      })).filter(x => x.slug && x.score > 0).sort((a,b) => b.score - a.score).slice(0,5);
+    }catch(_){ return []; }
+  }
+
+  async function searchPredictMarketsByText(query){
+    if(!query) return [];
+    try{
+      const sr = await fetchJsonPredict(`type=search&query=${encodeURIComponent(query.slice(0,120))}&limit=20`);
+      const ms = collectPredictMarkets(sr);
+      return ms.map(m => {
+        const title = m.title || m.question || (m.slug || "");
+        return {
+          id: m.id ?? m.marketId ?? null,
+          slug: m.slug || (m.category && m.category.slug) || "",
+          title,
+          score: pairScore(query, title),
+        };
+      }).filter(x => x.id != null && x.score > 0).sort((a,b) => b.score - a.score).slice(0,5);
+    }catch(_){ return []; }
+  }
+
+  function renderPairCandidates(containerId, candidates, source, onPick){
+    const el = $(containerId);
+    if(!el) return;
+    if(!candidates.length){ el.innerHTML = ""; el.classList.add("hide"); return; }
+    el.classList.remove("hide");
+    el.innerHTML = `
+      <div class="pair-cand-head">从 ${source} 找到 ${candidates.length} 个对家候选（点击锁定）：</div>
+      <div class="pair-cand-list">
+        ${candidates.map((c,i) => `
+          <button type="button" class="pair-cand" data-pick="${i}" title="${escapeHtml(c.title)}">
+            <span class="pc-score">${Math.round(c.score*100)}%</span>
+            <span class="pc-title">${escapeHtml(c.title)}</span>
+          </button>
+        `).join("")}
+      </div>`;
+    el.querySelectorAll("[data-pick]").forEach(b => {
+      b.addEventListener("click", () => {
+        const idx = parseInt(b.getAttribute("data-pick"), 10);
+        onPick(candidates[idx]);
+      });
+    });
+  }
+
   const VERCEL_API_ROOT = "https://yuceyuce.vercel.app";
   const POLYMARKET_API_BASE = (() => {
     const h = location.hostname;
@@ -1575,6 +1658,63 @@ Polymarket Maker：fee/share = 0
     refreshPairingStrip();
     calculate();
     startAutoRefreshIfEnabled();
+    triggerPolyAutoSearch(title);
+  }
+
+  async function triggerPolyAutoSearch(query){
+    const container = $("predictPairCandidates");
+    if(!container) return;
+    container.innerHTML = `<div class="pair-cand-head">正在搜 Polymarket 对家 …</div>`;
+    container.classList.remove("hide");
+    const cands = await searchPolyEventsByText(query);
+    if(_currentEvent && _currentPredict){
+      // already paired manually — skip noisy candidates
+    }
+    renderPairCandidates("predictPairCandidates", cands, "Polymarket", (pick) => {
+      const url = `https://polymarket.com/event/${pick.slug}`;
+      $("marketUrl").value = url;
+      fetchAndFillFromUrl();
+    });
+  }
+
+  async function triggerPredictAutoSearch(query){
+    const container = $("polyPairCandidates");
+    if(!container) return;
+    container.innerHTML = `<div class="pair-cand-head">正在搜 Predict.fun 对家 …</div>`;
+    container.classList.remove("hide");
+    const cands = await searchPredictMarketsByText(query);
+    renderPairCandidates("polyPairCandidates", cands, "Predict.fun", (pick) => {
+      const url = pick.slug
+        ? `https://predict.fun/market/${pick.slug}`
+        : "";
+      if(url){
+        $("predictUrl").value = url;
+        fetchAndFillFromPredictUrl();
+      }else{
+        // No slug — fall back to direct id load
+        loadPredictById(pick.id, pick.title);
+      }
+    });
+  }
+
+  async function loadPredictById(id, title){
+    if(!/^\d+$/.test(String(id))) return;
+    const status = $("predictStatus");
+    status.className = "urlbox-status loading";
+    status.textContent = `直接载入 Predict 市场 #${id} …`;
+    const mySeq = ++_predictFetchSeq;
+    try{
+      const market = { id, title, question: title };
+      _currentPredict = {
+        slug: String(id), kind: "direct", category: null,
+        markets: [market], chosen: 0, fillA: null, fillB: null
+      };
+      renderPredictMarketPicker();
+      await loadPredictMarket(mySeq);
+    }catch(err){
+      status.className = "urlbox-status bad";
+      status.textContent = `载入失败：${err && err.message ? err.message : String(err)}`;
+    }
   }
 
   async function fetchAndFillFromPredictUrl(){
@@ -2000,6 +2140,7 @@ Polymarket Maker：fee/share = 0
     books.innerHTML = renderBookCard(mA.name, bookA, target) + renderBookCard(mB.name, bookB, target);
     refreshPairingStrip();
     startAutoRefreshIfEnabled();
+    triggerPredictAutoSearch(_currentEvent.title);
   }
 
   function calculate(){
