@@ -88,8 +88,17 @@
     .platform-card{padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--panel-a);}
     .platform-card .urlbox{margin:0;border:none;padding:0;background:transparent;}
     .platform-card .urlbox-books{grid-template-columns:1fr 1fr;}
-    .platform-card .plat-head{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;margin-bottom:8px;}
+    .platform-card .plat-head{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;margin-bottom:8px;flex-wrap:wrap;}
     .platform-card .plat-head .plat-badge{padding:2px 8px;border-radius:999px;font-size:10.5px;letter-spacing:.03em;}
+    .platform-card .plat-head #polyHeadTitle,
+    .platform-card .plat-head #predictHeadTitle{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:12px;color:var(--sub);}
+    .platform-card .plat-open{font-size:11.5px;color:var(--accent);text-decoration:none;font-weight:600;}
+    .platform-card .plat-open:hover{text-decoration:underline;}
+    .platform-card .plat-order{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;}
+    .platform-card .plat-order button{padding:4px 10px;font-size:11px;background:transparent;border:none;color:var(--muted);cursor:pointer;font-family:inherit;font-weight:600;}
+    .platform-card .plat-order button.active{background:var(--accent);color:#fff;}
+    .platform-card.plat-poly .plat-order button.active{background:var(--good);}
+    .platform-card .plat-order button:not(.active):hover{color:var(--sub);background:rgba(148,163,184,.08);}
     .platform-card.plat-poly .plat-badge{background:rgba(16,185,129,.14);color:var(--good);}
     .platform-card.plat-predict .plat-badge{background:rgba(124,58,237,.14);color:var(--accent);}
     .platform-card .plat-fees{margin-top:10px;padding:8px 10px;border:1px dashed var(--line);border-radius:8px;font-size:12px;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-variant-numeric:tabular-nums;}
@@ -654,7 +663,15 @@
 
     <section class="platforms-grid" id="platformsRow">
       <div class="platform-card plat-poly">
-        <div class="plat-head"><span class="plat-badge">Polymarket</span><span id="polyHeadTitle">Polymarket 抓盘</span></div>
+        <div class="plat-head">
+          <span class="plat-badge">Polymarket</span>
+          <span id="polyHeadTitle">Polymarket 抓盘</span>
+          <a href="#" id="polyOpenLink" class="plat-open" hidden target="_blank" rel="noreferrer">打开 ↗</a>
+          <div class="plat-order" id="polyOrderSeg" role="tablist" aria-label="Polymarket 下单方式">
+            <button type="button" class="active" data-plat="poly" data-order="taker">市价 Taker</button>
+            <button type="button" data-plat="poly" data-order="maker">限价 Maker</button>
+          </div>
+        </div>
         <div class="urlbox">
           <div class="urlbox-row">
             <input id="marketUrl" type="url" placeholder="https://polymarket.com/event/..." autocomplete="off">
@@ -673,7 +690,15 @@
       </div>
 
       <div class="platform-card plat-predict">
-        <div class="plat-head"><span class="plat-badge">Predict.fun</span><span id="predictHeadTitle">Predict.fun 抓盘</span></div>
+        <div class="plat-head">
+          <span class="plat-badge">Predict.fun</span>
+          <span id="predictHeadTitle">Predict.fun 抓盘</span>
+          <a href="#" id="predictOpenLink" class="plat-open" hidden target="_blank" rel="noreferrer">打开 ↗</a>
+          <div class="plat-order" id="predictOrderSeg" role="tablist" aria-label="Predict.fun 下单方式">
+            <button type="button" class="active" data-plat="predict" data-order="taker">市价 Taker</button>
+            <button type="button" data-plat="predict" data-order="maker">限价 Maker</button>
+          </div>
+        </div>
         <div class="urlbox">
           <div class="urlbox-row">
             <input id="predictUrl" type="url" placeholder="https://predict.fun/market/..." autocomplete="off">
@@ -1157,6 +1182,52 @@
     flash(el);
   }
 
+  // Per-platform order-type choice (市价 Taker / 限价 Maker). Applied to any
+  // A/B leg whose `platformX` equals this platform, and used by
+  // renderPlatformFees to estimate fees for the hypothetical trade.
+  const _platOrder = { poly: "taker", predict: "taker" };
+
+  function setPlatOrder(platform, order){
+    if(order !== "taker" && order !== "maker") return;
+    _platOrder[platform] = order;
+    const seg = platform === "poly" ? $("polyOrderSeg") : $("predictOrderSeg");
+    if(seg){
+      seg.querySelectorAll("button").forEach(b => {
+        b.classList.toggle("active", b.getAttribute("data-order") === order);
+      });
+    }
+    // Propagate to legs that are currently sourced from this platform.
+    ["A","B"].forEach(side => {
+      if($("platform"+side).value === platform){
+        $("order"+side).value = order;
+      }
+    });
+    schedule();
+    persistState();
+  }
+
+  function setPlatOpenLink(platform, url){
+    const el = platform === "poly" ? $("polyOpenLink") : $("predictOpenLink");
+    if(!el) return;
+    if(url){ el.href = url; el.hidden = false; }
+    else { el.hidden = true; }
+  }
+
+  function setPlatHeadTitle(platform, text){
+    const el = platform === "poly" ? $("polyHeadTitle") : $("predictHeadTitle");
+    if(el) el.textContent = text || (platform === "poly" ? "Polymarket 抓盘" : "Predict.fun 抓盘");
+  }
+
+  // Keep the user's 盘口详情 expansion across auto-refresh re-renders.
+  const _bookOpen = { poly: false, predict: false };
+  function wireBookFoldPersistence(containerId, key){
+    const container = $(containerId);
+    if(!container) return;
+    const d = container.querySelector("details.book-fold");
+    if(!d) return;
+    if(_bookOpen[key]) d.open = true;
+    d.addEventListener("toggle", () => { _bookOpen[key] = d.open; });
+  }
   let _silentUpdate = false;
   let _lastStatusForFlash = null;
   function flash(el){
@@ -1750,7 +1821,7 @@ Polymarket Maker：fee/share = 0
     // settings as a sensible proxy but force the platform field.
     const feeParamsBase = {
       platform,
-      order: "taker",
+      order: _platOrder[platform] || "taker",
       predictBase: readNum("predictBase"),
       predictDiscount: readNum("predictDiscount"),
       polyRate: readNum("polyRateA") || 0.03,
@@ -2009,6 +2080,7 @@ Polymarket Maker：fee/share = 0
         ${fillBtns("no")}
       </div>`;
     books.innerHTML = `<details class="book-fold"><summary>盘口详情（点击展开）</summary><div class="books-grid">${predictInner}</div></details>`;
+    wireBookFoldPersistence("predictBooks", "predict");
     books.querySelectorAll("[data-pf-side][data-pf-target]").forEach(b => {
       b.addEventListener("click", onPredictFillClick);
     });
@@ -2022,6 +2094,8 @@ Polymarket Maker：fee/share = 0
     st.className = "urlbox-status ok";
     const multiTip = _currentPredict.markets.length > 1 ? `（${_currentPredict.markets.length} 个子市场可切换）` : "";
     st.textContent = `${ts} · ${title}${multiTip} · VWAP 买 ${yesName} ${askY}，买 ${noName} ${askN}（@ ${sizeTip}）`;
+    setPlatHeadTitle("predict", title);
+    setPlatOpenLink("predict", _currentPredict.slug ? `https://predict.fun/market/${_currentPredict.slug}` : "");
     refreshPairingStrip();
     calculate();
     startAutoRefreshIfEnabled();
@@ -2211,12 +2285,16 @@ Polymarket Maker：fee/share = 0
     $("platform"+target).value = "predict";
     $("price"+target).value = (walk.avg * 100).toFixed(2);
     setSideBook(target, {book, source:"predict", sourceLabel:"Predict.fun", title: name});
+    const predictUrl = _currentPredict.slug ? `https://predict.fun/market/${_currentPredict.slug}` : "";
     setSideSource(target, {
       platform:"predict", platformLabel:"Predict.fun",
-      url: _currentPredict.slug ? `https://predict.fun/market/${_currentPredict.slug}` : "",
+      url: predictUrl,
       outcomeName: side === "yes" ? _currentPredict.yesName : _currentPredict.noName,
       title: name
     });
+    setPlatOpenLink("predict", predictUrl);
+    setPlatHeadTitle("predict", _currentPredict.title || "Predict.fun");
+    $("order"+target).value = _platOrder.predict;
     syncVisibility(target);
     collapseHeroOnce();
     calculate();
@@ -2564,6 +2642,11 @@ Polymarket Maker：fee/share = 0
     const polyEventUrl = `https://polymarket.com/event/${_currentEvent.slug}`;
     setSideSource("A", {platform:"poly", platformLabel:"Polymarket", url: polyEventUrl, outcomeName: mA.name, title: mA.name});
     setSideSource("B", {platform:"poly", platformLabel:"Polymarket", url: polyEventUrl, outcomeName: mB.name, title: mB.name});
+    setPlatOpenLink("poly", polyEventUrl);
+    setPlatHeadTitle("poly", _currentEvent.title || "Polymarket");
+    // Apply platform-level order choice to both sides (Poly fetch fills both).
+    $("orderA").value = _platOrder.poly;
+    $("orderB").value = _platOrder.poly;
 
     ["A","B"].forEach(syncVisibility);
     collapseHeroOnce();
@@ -2585,6 +2668,7 @@ Polymarket Maker：fee/share = 0
     books.hidden = false;
     const bookInner = renderBookCard(mA.name, bookA, fill) + renderBookCard(mB.name, bookB, fill);
     books.innerHTML = `<details class="book-fold"><summary>盘口详情（点击展开）</summary><div class="books-grid">${bookInner}</div></details>`;
+    wireBookFoldPersistence("urlBooks", "poly");
     refreshPairingStrip();
     startAutoRefreshIfEnabled();
     toast(`已抓 Polymarket：${_currentEvent.title || parsed.slug}`, "ok");
@@ -3065,6 +3149,7 @@ Polymarket Maker：fee/share = 0
       const books = $("urlBooks");
       const inner = renderBookCard(mA.name, resA.book, target) + renderBookCard(mB.name, resB.book, target);
       books.innerHTML = `<details class="book-fold"><summary>盘口详情（点击展开）</summary><div class="books-grid">${inner}</div></details>`;
+      wireBookFoldPersistence("urlBooks", "poly");
       books.hidden = false;
       calculate();
     }catch(_){ /* silent */ }
@@ -3096,6 +3181,7 @@ Polymarket Maker：fee/share = 0
           ${fillBtns("no")}
         </div>`;
       books.innerHTML = `<details class="book-fold"><summary>盘口详情（点击展开）</summary><div class="books-grid">${predictInner}</div></details>`;
+      wireBookFoldPersistence("predictBooks", "predict");
       books.querySelectorAll("[data-pf-side][data-pf-target]").forEach(b => b.addEventListener("click", onPredictFillClick));
       ["A","B"].forEach(t => {
         const side = _currentPredict["fill"+t];
@@ -3314,6 +3400,13 @@ Polymarket Maker：fee/share = 0
       $("legAmount"+side).addEventListener("input", () => onLegAmountInput(side));
       $("legClear"+side).addEventListener("click", clearLegAnchor);
       $("legCopy"+side).addEventListener("click", () => copyLegAmount(side));
+    });
+
+    // Platform card order-type segmented buttons.
+    document.querySelectorAll(".plat-order button").forEach(b => {
+      b.addEventListener("click", () => {
+        setPlatOrder(b.getAttribute("data-plat"), b.getAttribute("data-order"));
+      });
     });
 
     // Global: Ctrl/Cmd+Enter anywhere triggers fetch of whichever URL is non-empty.
