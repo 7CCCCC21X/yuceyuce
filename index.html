@@ -190,10 +190,13 @@
     }
     @media (max-width:620px){
       body{padding:16px 10px 50px}
-      .row,.row-3,.summary{grid-template-columns:1fr}
+      .row{grid-template-columns:1fr 1fr;gap:8px;}
+      .row-3{grid-template-columns:1fr 1fr;gap:8px;}
+      .summary{grid-template-columns:1fr 1fr;gap:8px;}
       h1{font-size:25px}
       .hero-main,.hero-side,.inputs,.results{padding:16px}
-      .actions{flex-direction:column}
+      .actions{flex-wrap:wrap;}
+      .actions button{flex:1 1 auto;min-width:96px;}
       .verdict{grid-template-columns:1fr;text-align:left;}
       .verdict-side{text-align:left;}
       .verdict-amount{font-size:24px;}
@@ -202,6 +205,15 @@
       .table-wrap.expanded{overflow-x:auto;}
       .table-wrap th,.table-wrap td{padding:10px 8px;font-size:12px;}
       .table-head{flex-wrap:wrap;}
+      .metric{min-height:0;}
+      .metric .v{font-size:20px;}
+      .hint{font-size:10.5px;}
+      .leg{padding:12px;}
+      label{margin-bottom:5px;}
+      input,select{padding:10px 10px;}
+    }
+    @media (max-width:380px){
+      .row,.row-3,.summary{grid-template-columns:1fr;}
     }
   </style>
 </head>
@@ -256,12 +268,12 @@
       <div class="row">
         <div>
           <label for="bankroll">本金，USDT/USDC</label>
-          <small class="hint">整笔对冲预算，两边总花费上限。</small>
+          <small class="hint">两边总花费上限。</small>
           <input id="bankroll" type="number" step="0.01" min="0" value="1000" inputmode="decimal">
         </div>
         <div>
           <label for="roundShares">份额处理</label>
-          <small class="hint">允许小数用于理论计算；整数更接近实际下单。</small>
+          <small class="hint">整数更接近实际下单。</small>
           <select id="roundShares">
             <option value="none">允许小数份额</option>
             <option value="floor">向下取整</option>
@@ -295,7 +307,7 @@
           </div>
           <div>
             <label for="orderA">订单</label>
-            <small class="hint">市价按 Taker 费；挂单按 Maker（未成交前不是完整对冲）。</small>
+            <small class="hint">市价按 Taker 费，挂单按 Maker。</small>
             <select id="orderA">
               <option value="taker">市价 / 立即成交（Taker）</option>
               <option value="maker">限价挂单 / 等别人吃单（Maker）</option>
@@ -359,7 +371,7 @@
           </div>
           <div>
             <label for="orderB">订单</label>
-            <small class="hint">市价按 Taker 费；挂单按 Maker（未成交前不是完整对冲）。</small>
+            <small class="hint">市价按 Taker 费，挂单按 Maker。</small>
             <select id="orderB">
               <option value="taker">市价 / 立即成交（Taker）</option>
               <option value="maker">限价挂单 / 等别人吃单（Maker）</option>
@@ -399,7 +411,7 @@
         <div class="row">
           <div>
             <label for="predictBase">Taker Base Fee，%</label>
-            <small class="hint">Predict.fun Taker 费率上限，官方文档为 2%。</small>
+            <small class="hint">官方文档为 2%。</small>
             <input id="predictBase" type="number" step="0.01" min="0" max="100" value="2" inputmode="decimal">
           </div>
           <div>
