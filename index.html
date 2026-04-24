@@ -443,6 +443,24 @@
     .pair-cand .pc-score{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;min-width:34px;font-size:11.5px;}
     .pair-cand .pc-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
+    /* Per-leg source header: platform badge + outcome + open-in-new link */
+    .leg-src{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:11px;}
+    .leg-src.hide{display:none;}
+    .leg-src .ls-platform{padding:2px 7px;border-radius:999px;font-weight:700;font-size:10.5px;letter-spacing:.03em;}
+    .leg-src .ls-platform.ls-poly{background:rgba(16,185,129,.14);color:var(--good);}
+    .leg-src .ls-platform.ls-predict{background:rgba(124,58,237,.14);color:var(--accent);}
+    .leg-src .ls-outcome{color:var(--sub);font-weight:600;}
+    .leg-src .ls-link{color:var(--accent);text-decoration:none;font-weight:600;}
+    .leg-src .ls-link:hover{text-decoration:underline;}
+
+    /* Per-leg money readout: 应花 $X · N 份 */
+    .leg-money{margin:0 0 10px;padding:8px 10px;border-radius:8px;background:rgba(124,58,237,.06);border:1px dashed var(--line);font-variant-numeric:tabular-nums;display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+    .leg-money.hide{display:none;}
+    .leg-money .lm-spend{font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.01em;}
+    .leg-money .lm-shares{font-size:11.5px;color:var(--muted);}
+    .leg.leg-a .leg-money{background:rgba(124,58,237,.06);}
+    .leg.leg-b .leg-money{background:rgba(16,185,129,.06);}
+
     /* Per-leg book strip — shows source orderbook summary inline */
     .leg-book{margin:0 0 10px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);font-size:11.5px;background:transparent;}
     .leg-book.hide{display:none;}
@@ -608,8 +626,9 @@
 
       <div class="legs-grid">
       <div class="leg leg-a">
-        <div class="leg-title"><h3>A 结果</h3></div>
+        <div class="leg-title"><h3>A 结果</h3><div id="legSourceA" class="leg-src hide"></div></div>
         <div id="legBookA" class="leg-book hide"></div>
+        <div id="legMoneyA" class="leg-money hide"></div>
 
         <div class="row">
           <div>
@@ -676,8 +695,9 @@
       </div>
 
       <div class="leg leg-b">
-        <div class="leg-title"><h3>B 结果</h3></div>
+        <div class="leg-title"><h3>B 结果</h3><div id="legSourceB" class="leg-src hide"></div></div>
         <div id="legBookB" class="leg-book hide"></div>
+        <div id="legMoneyB" class="leg-money hide"></div>
 
         <div class="row">
           <div>
@@ -1517,6 +1537,40 @@ Polymarket Maker：fee/share = 0
   let _currentPredict = null;
 
   const _sideBook = { A: null, B: null };
+  const _sideSource = { A: null, B: null };
+
+  function renderSideSource(side){
+    const el = $("legSource"+side);
+    if(!el) return;
+    const s = _sideSource[side];
+    if(!s){ el.classList.add("hide"); el.innerHTML = ""; return; }
+    el.classList.remove("hide");
+    const cls = s.platform === "poly" ? "ls-poly" : "ls-predict";
+    const link = s.url ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noreferrer" class="ls-link">打开 ↗</a>` : "";
+    el.innerHTML = `
+      <span class="ls-platform ${cls}">${escapeHtml(s.platformLabel)}</span>
+      <span class="ls-outcome">${escapeHtml(s.outcomeName || "")}</span>
+      ${link}`;
+  }
+
+  function setSideSource(side, src){
+    _sideSource[side] = src;
+    renderSideSource(side);
+  }
+
+  function renderLegMoney(side, info){
+    const el = $("legMoney"+side);
+    if(!el) return;
+    if(!info || !(info.spend > 0)){
+      el.classList.add("hide");
+      el.innerHTML = "";
+      return;
+    }
+    el.classList.remove("hide");
+    el.innerHTML = `
+      <span class="lm-spend">${money(info.spend, 2)}</span>
+      <span class="lm-shares">${num(info.shares, 4)} 份 @ ${(info.price*100).toFixed(2)}¢</span>`;
+  }
 
   function renderSideBook(side){
     const el = $("legBook"+side);
@@ -1667,12 +1721,15 @@ Polymarket Maker：fee/share = 0
     container.innerHTML = `<div class="pair-cand-head">正在搜 Polymarket 对家 …</div>`;
     container.classList.remove("hide");
     const cands = await searchPolyEventsByText(query);
-    if(_currentEvent && _currentPredict){
-      // already paired manually — skip noisy candidates
+    // Auto-lock when there's a confident single winner and no Poly event loaded yet.
+    if(!_currentEvent && cands.length && cands[0].score >= 0.75 && (cands.length === 1 || cands[0].score - (cands[1]?.score || 0) >= 0.15)){
+      container.innerHTML = `<div class="pair-cand-head">已自动锁定 Polymarket 对家：<b>${escapeHtml(cands[0].title)}</b>（${Math.round(cands[0].score*100)}%）</div>`;
+      $("marketUrl").value = `https://polymarket.com/event/${cands[0].slug}`;
+      fetchAndFillFromUrl();
+      return;
     }
     renderPairCandidates("predictPairCandidates", cands, "Polymarket", (pick) => {
-      const url = `https://polymarket.com/event/${pick.slug}`;
-      $("marketUrl").value = url;
+      $("marketUrl").value = `https://polymarket.com/event/${pick.slug}`;
       fetchAndFillFromUrl();
     });
   }
@@ -1683,15 +1740,23 @@ Polymarket Maker：fee/share = 0
     container.innerHTML = `<div class="pair-cand-head">正在搜 Predict.fun 对家 …</div>`;
     container.classList.remove("hide");
     const cands = await searchPredictMarketsByText(query);
+    if(!_currentPredict && cands.length && cands[0].score >= 0.75 && (cands.length === 1 || cands[0].score - (cands[1]?.score || 0) >= 0.15)){
+      const pick = cands[0];
+      container.innerHTML = `<div class="pair-cand-head">已自动锁定 Predict.fun 对家：<b>${escapeHtml(pick.title)}</b>（${Math.round(pick.score*100)}%）</div>`;
+      if(pick.slug){
+        $("predictUrl").value = `https://predict.fun/market/${pick.slug}`;
+        fetchAndFillFromPredictUrl();
+      }else{
+        loadPredictById(pick.id, pick.title);
+      }
+      return;
+    }
     renderPairCandidates("polyPairCandidates", cands, "Predict.fun", (pick) => {
-      const url = pick.slug
-        ? `https://predict.fun/market/${pick.slug}`
-        : "";
+      const url = pick.slug ? `https://predict.fun/market/${pick.slug}` : "";
       if(url){
         $("predictUrl").value = url;
         fetchAndFillFromPredictUrl();
       }else{
-        // No slug — fall back to direct id load
         loadPredictById(pick.id, pick.title);
       }
     });
@@ -1802,6 +1867,12 @@ Polymarket Maker：fee/share = 0
     $("platform"+target).value = "predict";
     $("price"+target).value = (walk.avg * 100).toFixed(2);
     setSideBook(target, {book, source:"predict", sourceLabel:"Predict.fun", title: name});
+    setSideSource(target, {
+      platform:"predict", platformLabel:"Predict.fun",
+      url: _currentPredict.slug ? `https://predict.fun/market/${_currentPredict.slug}` : "",
+      outcomeName: side === "yes" ? _currentPredict.yesName : _currentPredict.noName,
+      title: name
+    });
     syncVisibility(target);
     collapseHeroOnce();
     calculate();
@@ -2119,6 +2190,9 @@ Polymarket Maker：fee/share = 0
 
     setSideBook("A", {book: bookA, source:"poly", sourceLabel:"Polymarket", title: mA.name});
     setSideBook("B", {book: bookB, source:"poly", sourceLabel:"Polymarket", title: mB.name});
+    const polyEventUrl = `https://polymarket.com/event/${_currentEvent.slug}`;
+    setSideSource("A", {platform:"poly", platformLabel:"Polymarket", url: polyEventUrl, outcomeName: mA.name, title: mA.name});
+    setSideSource("B", {platform:"poly", platformLabel:"Polymarket", url: polyEventUrl, outcomeName: mB.name, title: mB.name});
 
     ["A","B"].forEach(syncVisibility);
     collapseHeroOnce();
@@ -2411,6 +2485,8 @@ Polymarket Maker：fee/share = 0
     renderPartialFill();
     renderArbBanner({unitCost, roi, profit, shares, status});
     renderSideBook("A"); renderSideBook("B");
+    renderLegMoney("A", {spend: a.spend, shares, price: a.p});
+    renderLegMoney("B", {spend: b.spend, shares, price: b.p});
   }
 
   function syncSizeModeVisibility(){
