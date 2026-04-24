@@ -13,7 +13,7 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const { type, slug, token_id } = req.query || {};
+  const { type, slug, token_id, q, limit_per_type } = req.query || {};
   let targetUrl;
 
   if (type === "event") {
@@ -24,8 +24,17 @@ module.exports = async function handler(req, res) {
     if (!token_id) { res.status(400).json({ error: "Missing token_id" }); return; }
     if (!/^[a-z0-9_-]{10,200}$/i.test(token_id)) { res.status(400).json({ error: "Invalid token_id" }); return; }
     targetUrl = `https://clob.polymarket.com/book?token_id=${encodeURIComponent(token_id)}`;
+  } else if (type === "search") {
+    if (!q || typeof q !== "string" || q.length < 2 || q.length > 200) {
+      res.status(400).json({ error: "Invalid q" }); return;
+    }
+    const params = new URLSearchParams({ q });
+    if (limit_per_type && /^\d{1,3}$/.test(limit_per_type)) params.set("limit_per_type", limit_per_type);
+    else params.set("limit_per_type", "10");
+    params.set("events_status", "active");
+    targetUrl = `https://gamma-api.polymarket.com/public-search?${params.toString()}`;
   } else {
-    res.status(400).json({ error: "Invalid type. Use type=event or type=book" });
+    res.status(400).json({ error: "Invalid type. Use type=event|book|search" });
     return;
   }
 
