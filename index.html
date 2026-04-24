@@ -1253,7 +1253,7 @@ Polymarket Maker：fee/share = 0
   }
 
   async function resolvePredictMarket(slug){
-    const sr = await fetchJsonPredict(`type=search&q=${encodeURIComponent(slug)}`);
+    const sr = await fetchJsonPredict(`type=search&query=${encodeURIComponent(slug)}`);
     const markets = collectPredictMarkets(sr);
     if(!markets.length) throw new Error("搜索没返回 Predict 市场，slug 可能不对");
     const target = slug.toLowerCase();
