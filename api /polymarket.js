@@ -1,64 +1,48 @@
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
+module.exports = async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Cache-Control", "no-store");
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      ...CORS_HEADERS,
-      "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "no-store",
-    },
-  });
-}
-
-export default async function handler(request) {
-  if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  if (req.method === "OPTIONS") {
+    res.status(204).end();
+    return;
   }
-  if (request.method !== "GET") {
-    return json({ error: "Method not allowed" }, 405);
+  if (req.method !== "GET") {
+    res.status(405).json({ error: "Method not allowed" });
+    return;
   }
 
-  const url = new URL(request.url);
-  const type = url.searchParams.get("type");
+  const { type, slug, token_id } = req.query || {};
   let targetUrl;
 
   if (type === "event") {
-    const slug = url.searchParams.get("slug");
-    if (!slug) return json({ error: "Missing slug" }, 400);
-    if (!/^[a-z0-9-]+$/i.test(slug)) return json({ error: "Invalid slug" }, 400);
+    if (!slug) { res.status(400).json({ error: "Missing slug" }); return; }
+    if (!/^[a-z0-9-]+$/i.test(slug)) { res.status(400).json({ error: "Invalid slug" }); return; }
     targetUrl = `https://gamma-api.polymarket.com/events?slug=${encodeURIComponent(slug)}`;
   } else if (type === "book") {
-    const tokenId = url.searchParams.get("token_id");
-    if (!tokenId) return json({ error: "Missing token_id" }, 400);
-    if (!/^[a-z0-9_-]{10,200}$/i.test(tokenId)) return json({ error: "Invalid token_id" }, 400);
-    targetUrl = `https://clob.polymarket.com/book?token_id=${encodeURIComponent(tokenId)}`;
+    if (!token_id) { res.status(400).json({ error: "Missing token_id" }); return; }
+    if (!/^[a-z0-9_-]{10,200}$/i.test(token_id)) { res.status(400).json({ error: "Invalid token_id" }); return; }
+    targetUrl = `https://clob.polymarket.com/book?token_id=${encodeURIComponent(token_id)}`;
   } else {
-    return json({ error: "Invalid type. Use type=event or type=book" }, 400);
+    res.status(400).json({ error: "Invalid type. Use type=event or type=book" });
+    return;
   }
 
   try {
     const upstream = await fetch(targetUrl, {
       method: "GET",
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json" }
     });
     const body = await upstream.text();
-    return new Response(body, {
-      status: upstream.status,
-      headers: {
-        ...CORS_HEADERS,
-        "Content-Type": upstream.headers.get("Content-Type") || "application/json; charset=utf-8",
-        "Cache-Control": "no-store",
-      },
-    });
+    const contentType = upstream.headers.get("Content-Type") || "application/json; charset=utf-8";
+    res.status(upstream.status);
+    res.setHeader("Content-Type", contentType);
+    res.send(body);
   } catch (error) {
-    return json(
-      { error: "Failed to fetch Polymarket API", message: (error && error.message) || String(error) },
-      502
-    );
+    res.status(502).json({
+      error: "Failed to fetch Polymarket API",
+      message: (error && error.message) || String(error)
+    });
   }
-}
+};
