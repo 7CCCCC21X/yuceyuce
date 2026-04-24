@@ -243,6 +243,33 @@
     .urlbox-row .refresh-btn svg{width:15px;height:15px;}
     .urlbox-row .refresh-btn:disabled{opacity:.45;cursor:not-allowed;}
     .urlbox-row .refresh-btn.spinning svg{animation:spin 1s linear infinite;}
+    .bookcard .rows > div.eaten{background:linear-gradient(90deg,rgba(239,68,68,.18),rgba(239,68,68,.03));border-left:2px solid rgba(239,68,68,.7);padding-left:4px;}
+    .bookcard .depthline{font-size:11px;color:var(--muted);text-align:center;margin:4px 0 2px;}
+    .bookcard .depthline.bad{color:var(--bad);}
+    .bookcard .depthline.ok{color:var(--good);}
+    .arb-banner{position:sticky;top:8px;z-index:20;margin:-8px 0 14px;padding:10px 14px;border-radius:14px;border:1px solid var(--line-strong);background:linear-gradient(180deg,rgba(124,58,237,.10),rgba(2,6,23,.25));backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:12px;}
+    :root[data-theme="light"] .arb-banner{background:linear-gradient(180deg,rgba(124,58,237,.08),rgba(255,255,255,.85));}
+    .arb-banner .arb-group{display:flex;flex-direction:column;line-height:1.35;}
+    .arb-banner .arb-lbl{color:var(--muted);font-size:10px;letter-spacing:.02em;text-transform:uppercase;}
+    .arb-banner .arb-val{font-weight:700;font-variant-numeric:tabular-nums;}
+    .arb-banner .arb-val.good{color:var(--good);}
+    .arb-banner .arb-val.bad{color:var(--bad);}
+    .arb-banner .arb-val.warn{color:var(--accent);}
+    .arb-banner .arb-live{padding:4px 8px;border-radius:10px;background:rgba(2,6,23,.3);}
+    :root[data-theme="light"] .arb-banner .arb-live{background:rgba(0,0,0,.06);}
+    .arb-banner .arb-ts{margin-left:auto;color:var(--muted);font-size:11px;display:flex;align-items:center;gap:8px;}
+    .arb-banner .arb-ts label{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);cursor:pointer;}
+    .arb-banner .arb-ts input{accent-color:var(--accent);}
+    .arb-banner.hide{display:none;}
+    .pair-strip{margin:0 0 10px;padding:10px 12px;border-radius:12px;border:1px dashed var(--line);background:rgba(2,6,23,.18);display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px;}
+    :root[data-theme="light"] .pair-strip{background:rgba(0,0,0,.04);}
+    .pair-strip .pcol{display:flex;flex-direction:column;gap:3px;}
+    .pair-strip .plbl{font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);}
+    .pair-strip .pval{font-weight:600;color:var(--sub);}
+    .pair-strip .pmeta{color:var(--muted);font-size:11px;}
+    .pair-strip .warn-pill{display:inline-block;padding:1px 6px;margin-left:4px;border-radius:6px;font-size:10px;background:rgba(245,158,11,.15);color:var(--accent);border:1px solid var(--accent);}
+    .pair-strip.hide{display:none;}
+    @media (max-width:640px){ .pair-strip{grid-template-columns:1fr;} }
     @keyframes spin{to{transform:rotate(360deg);}}
     .market-picker{margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:12px;background:rgba(2,6,23,.18);display:grid;grid-template-columns:1fr 1fr;gap:8px;}
     :root[data-theme="light"] .market-picker{background:rgba(255,255,255,.6);}
@@ -366,6 +393,38 @@
     <aside class="inputs card">
       <h2>输入</h2>
 
+      <div id="arbBanner" class="arb-banner hide" aria-live="polite">
+        <div class="arb-group">
+          <span class="arb-lbl">A/B 已填 · 每 $1 兑付</span>
+          <span class="arb-val" id="arbUnit">—</span>
+        </div>
+        <div class="arb-group">
+          <span class="arb-lbl">ROI</span>
+          <span class="arb-val" id="arbRoi">—</span>
+        </div>
+        <div class="arb-live arb-group" id="arbLiveWrap" hidden>
+          <span class="arb-lbl">📡 现价 VWAP（两边书）</span>
+          <span class="arb-val" id="arbLive">—</span>
+        </div>
+        <div class="arb-ts">
+          <span id="arbTs">—</span>
+          <label><input type="checkbox" id="autoRefresh"> 自动刷新 5s</label>
+        </div>
+      </div>
+
+      <div id="pairStrip" class="pair-strip hide">
+        <div class="pcol">
+          <span class="plbl">Polymarket</span>
+          <span class="pval" id="pairPolyTitle">—</span>
+          <span class="pmeta" id="pairPolyMeta">—</span>
+        </div>
+        <div class="pcol">
+          <span class="plbl">Predict.fun</span>
+          <span class="pval" id="pairPredictTitle">—</span>
+          <span class="pmeta" id="pairPredictMeta">—</span>
+        </div>
+      </div>
+
       <div class="urlbox">
         <div class="urlbox-title">
           <span>从 Polymarket 链接自动抓盘</span>
@@ -409,9 +468,12 @@
 
       <div class="row">
         <div>
-          <label for="bankroll">本金，USDT/USDC</label>
-          <small class="hint">两边总花费上限。</small>
-          <input id="bankroll" type="number" step="0.01" min="0" value="1000" inputmode="decimal">
+          <label for="sizeMode">规模模式</label>
+          <small class="hint">决定 VWAP 按本金吃还是按份额吃。</small>
+          <select id="sizeMode">
+            <option value="bankroll">按本金 USD</option>
+            <option value="shares">按固定份额</option>
+          </select>
         </div>
         <div>
           <label for="roundShares">份额处理</label>
@@ -420,6 +482,18 @@
             <option value="none">允许小数份额</option>
             <option value="floor">向下取整</option>
           </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="size-bankroll">
+          <label for="bankroll">本金，USDT/USDC</label>
+          <small class="hint">两边总花费上限；VWAP 按各边 ≈ 本金/2 吃。</small>
+          <input id="bankroll" type="number" step="0.01" min="0" value="1000" inputmode="decimal">
+        </div>
+        <div class="size-shares hide">
+          <label for="targetShares">目标份额，N</label>
+          <small class="hint">两边各买 N 份 Yes/No 对冲。</small>
+          <input id="targetShares" type="number" step="1" min="0" value="200" inputmode="numeric">
         </div>
       </div>
 
@@ -812,7 +886,7 @@
   };
 
   const ids = [
-    "bankroll","roundShares",
+    "bankroll","roundShares","sizeMode","targetShares","autoRefresh",
     "nameA","priceA","platformA","orderA","polyCatA","polyRateA","customFeeA","customFeePerShareA",
     "nameB","priceB","platformB","orderB","polyCatB","polyRateB","customFeeB","customFeePerShareB",
     "predictBase","predictDiscount"
@@ -822,6 +896,7 @@
   const PERCENT_RANGE = {min:0, max:100};
   const NUMERIC_CONSTRAINTS = {
     bankroll:       {min:0},
+    targetShares:   {min:0},
     priceA:         PRICE_RANGE,
     priceB:         PRICE_RANGE,
     predictBase:    PERCENT_RANGE,
@@ -1178,11 +1253,6 @@ Polymarket Maker：fee/share = 0
   }
 
   async function resolvePredictMarket(slug){
-    try{
-      const direct = await fetchJsonPredict(`type=market&id=${encodeURIComponent(slug)}`);
-      const m = unwrapPredict(direct);
-      if(m && (m.id != null || m.marketId != null)) return m;
-    }catch(_){}
     const sr = await fetchJsonPredict(`type=search&q=${encodeURIComponent(slug)}`);
     const markets = collectPredictMarkets(sr);
     if(!markets.length) throw new Error("搜索没返回 Predict 市场，slug 可能不对");
@@ -1267,33 +1337,39 @@ Polymarket Maker：fee/share = 0
       const yesName = predictOutcomeName(market, 0);
       const noName = predictOutcomeName(market, 1);
       const title = market.title || market.question || parsed.slug;
-      _currentPredict = { slug: parsed.slug, market, marketId, yesName, noName, yesBook, noBook, title };
+      _currentPredict = { slug: parsed.slug, market, marketId, yesName, noName, yesBook, noBook, title, lastFetch: Date.now() };
 
+      const target = currentSizeTarget();
+      const sizeTip = sizeLabel(target);
       const fillBtns = side => `
         <div class="predict-fill">
-          <button type="button" class="secondary" data-pf-side="${side}" data-pf-target="A">填入 A</button>
-          <button type="button" class="secondary" data-pf-side="${side}" data-pf-target="B">填入 B</button>
+          <button type="button" class="secondary" data-pf-side="${side}" data-pf-target="A">填入 A · VWAP @ ${sizeTip}</button>
+          <button type="button" class="secondary" data-pf-side="${side}" data-pf-target="B">填入 B · VWAP @ ${sizeTip}</button>
         </div>`;
       books.hidden = false;
       books.innerHTML = `
         <div class="predict-book-wrap">
-          ${renderBookCard(`${yesName}（Predict · Yes 侧）`, yesBook)}
+          ${renderBookCard(`${yesName}（Predict · Yes 侧）`, yesBook, target)}
           ${fillBtns("yes")}
         </div>
         <div class="predict-book-wrap">
-          ${renderBookCard(`${noName}（Predict · No 合成 = 1 − Yes）`, noBook)}
+          ${renderBookCard(`${noName}（Predict · No 合成 = 1 − Yes）`, noBook, target)}
           ${fillBtns("no")}
         </div>`;
       books.querySelectorAll("[data-pf-side][data-pf-target]").forEach(b => {
         b.addEventListener("click", onPredictFillClick);
       });
 
-      const ba = bestAskOf(yesBook), bb = bestBidOf(yesBook);
-      const askY = ba !== null ? `${(ba*100).toFixed(2)}¢` : "—";
-      const askN = bb !== null ? `${((1-bb)*100).toFixed(2)}¢` : "—";
+      const walkY = walkBook(sortedAsks(yesBook), target);
+      const walkN = walkBook(sortedAsks(noBook), target);
+      const askY = walkY.avg !== null ? `${(walkY.avg*100).toFixed(2)}¢` : "—";
+      const askN = walkN.avg !== null ? `${(walkN.avg*100).toFixed(2)}¢` : "—";
       const ts = new Date().toLocaleTimeString([], {hour12:false});
       status.className = "urlbox-status ok";
-      status.textContent = `${ts} · ${title} · 买 ${yesName} ${askY}，买 ${noName} ${askN}（点"填入 A/B"写到左侧）。`;
+      status.textContent = `${ts} · ${title} · VWAP 买 ${yesName} ${askY}，买 ${noName} ${askN}（@ ${sizeTip}）。`;
+      refreshPairingStrip();
+      calculate();
+      startAutoRefreshIfEnabled();
     }catch(err){
       if(mySeq !== _predictFetchSeq) return;
       status.className = "urlbox-status bad";
@@ -1320,37 +1396,48 @@ Polymarket Maker：fee/share = 0
     const btn = ev.currentTarget;
     const side = btn.getAttribute("data-pf-side");
     const target = btn.getAttribute("data-pf-target");
-    let price, name;
-    if(side === "yes"){
-      const ba = bestAskOf(_currentPredict.yesBook);
-      price = ba !== null ? ba : null;
-      name = `${_currentPredict.title} · ${_currentPredict.yesName}`;
-    }else{
-      const bb = bestBidOf(_currentPredict.yesBook);
-      price = bb !== null ? (1 - bb) : null;
-      name = `${_currentPredict.title} · ${_currentPredict.noName}`;
-    }
+    const book = side === "yes" ? _currentPredict.yesBook : _currentPredict.noBook;
+    const sizeT = currentSizeTarget();
+    const walk = walkBook(sortedAsks(book), sizeT);
     const status = $("predictStatus");
-    if(price == null){
+    if(walk.avg == null){
       status.className = "urlbox-status bad";
       status.textContent = "该侧盘口没有可用价格，无法填入。";
       return;
     }
+    _currentPredict["fill"+target] = side;
+    const name = `${_currentPredict.title} · ${side === "yes" ? _currentPredict.yesName : _currentPredict.noName}`;
     $("name"+target).value = name;
     $("platform"+target).value = "predict";
-    $("price"+target).value = (price * 100).toFixed(2);
+    $("price"+target).value = (walk.avg * 100).toFixed(2);
     syncVisibility(target);
     collapseHeroOnce();
     calculate();
     persistState();
     status.className = "urlbox-status ok";
-    status.textContent = `已填入 ${target}：${name} @ ${(price*100).toFixed(2)}¢`;
+    const exhaust = walk.exhausted ? "（深度不足）" : "";
+    status.textContent = `已填入 ${target}：${name} @ VWAP ${(walk.avg*100).toFixed(2)}¢（吃 ${walk.levelsHit} 档${exhaust}）`;
   }
 
   function parseJsonField(s, fallback){
     if(s == null) return fallback;
     if(typeof s !== "string") return s;
     try{ return JSON.parse(s); }catch(_){ return fallback; }
+  }
+
+  function currentSizeTarget(){
+    const mode = $("sizeMode") ? $("sizeMode").value : "bankroll";
+    if(mode === "shares"){
+      const n = readNum("targetShares");
+      return {shares: n > 0 ? n : Infinity, notional: Infinity, mode};
+    }
+    const b = readNum("bankroll");
+    return {shares: Infinity, notional: b > 0 ? b/2 : Infinity, mode};
+  }
+
+  function sizeLabel(t){
+    if(t.mode === "shares") return `份额 ${num(t.shares, 0)}`;
+    return `$${num(t.notional, 0)}/边`;
   }
 
   function bestAskOf(book){
@@ -1365,27 +1452,81 @@ Polymarket Maker：fee/share = 0
     return xs.length ? Math.max(...xs) : null;
   }
 
-  function renderBookCard(title, book){
-    const asks = ((book && book.asks) || [])
+  function sortedAsks(book){
+    return ((book && book.asks) || [])
       .map(x => ({p: parseFloat(x.price), s: parseFloat(x.size)}))
-      .filter(x => Number.isFinite(x.p))
-      .sort((a,b)=>a.p-b.p).slice(0,5).reverse();
-    const bids = ((book && book.bids) || [])
+      .filter(x => Number.isFinite(x.p) && Number.isFinite(x.s) && x.s > 0)
+      .sort((a,b) => a.p - b.p);
+  }
+
+  function sortedBids(book){
+    return ((book && book.bids) || [])
       .map(x => ({p: parseFloat(x.price), s: parseFloat(x.size)}))
-      .filter(x => Number.isFinite(x.p))
-      .sort((a,b)=>b.p-a.p).slice(0,5);
-    const askRows = asks.length
-      ? asks.map(x => `<div class="ask">${(x.p*100).toFixed(2)}¢</div><div class="ask">${num(x.s,0)}</div>`).join("")
+      .filter(x => Number.isFinite(x.p) && Number.isFinite(x.s) && x.s > 0)
+      .sort((a,b) => b.p - a.p);
+  }
+
+  // Walk `levels` (asks sorted asc or bids sorted desc) consuming liquidity
+  // until either `shares` or `notional` is met. Returns VWAP metrics.
+  function walkBook(levels, {shares = Infinity, notional = Infinity} = {}){
+    const out = {avg: null, filled: 0, notional: 0, lastPrice: null, levelsHit: 0, exhausted: false};
+    if(!Array.isArray(levels) || !levels.length) return out;
+    let needShares = shares > 0 ? shares : Infinity;
+    let needNotional = notional > 0 ? notional : Infinity;
+    for(const lvl of levels){
+      if(out.filled >= shares - 1e-9 || out.notional >= notional - 1e-9) break;
+      const maxByShare = needShares - out.filled;
+      const maxByNotional = needNotional > 0 ? (needNotional - out.notional) / lvl.p : Infinity;
+      const take = Math.min(lvl.s, maxByShare, maxByNotional);
+      if(!(take > 0)) break;
+      out.filled += take;
+      out.notional += take * lvl.p;
+      out.lastPrice = lvl.p;
+      out.levelsHit += 1;
+    }
+    const hitShares = shares !== Infinity && out.filled < shares - 1e-9;
+    const hitNotional = notional !== Infinity && out.notional < notional - 1e-9;
+    out.exhausted = hitShares || hitNotional;
+    out.avg = out.filled > 0 ? out.notional / out.filled : null;
+    return out;
+  }
+
+  function renderBookCard(title, book, fill){
+    const sortedA = sortedAsks(book);
+    const sortedB = sortedBids(book);
+    let eatCount = 0, walk = null;
+    if(fill && ((fill.shares && fill.shares > 0 && isFinite(fill.shares)) || (fill.notional && fill.notional > 0 && isFinite(fill.notional)))){
+      walk = walkBook(sortedA, fill);
+      eatCount = walk.levelsHit;
+    }
+    const topAsks = sortedA.slice(0,5);
+    const askDisplay = topAsks.slice().reverse();
+    const askRows = askDisplay.length
+      ? askDisplay.map(x => {
+          const isEaten = sortedA.indexOf(x) < eatCount;
+          const cls = isEaten ? "ask eaten" : "ask";
+          return `<div class="${cls}">${(x.p*100).toFixed(2)}¢</div><div class="${cls}">${num(x.s,0)}</div>`;
+        }).join("")
       : `<div class="empty" style="grid-column:1/-1;">无卖单</div>`;
-    const bidRows = bids.length
-      ? bids.map(x => `<div class="bid">${(x.p*100).toFixed(2)}¢</div><div class="bid">${num(x.s,0)}</div>`).join("")
+    const topBids = sortedB.slice(0,5);
+    const bidRows = topBids.length
+      ? topBids.map(x => `<div class="bid">${(x.p*100).toFixed(2)}¢</div><div class="bid">${num(x.s,0)}</div>`).join("")
       : `<div class="empty" style="grid-column:1/-1;">无买单</div>`;
     const ba = bestAskOf(book), bb = bestBidOf(book);
     const spread = (ba !== null && bb !== null) ? `价差 ${((ba-bb)*100).toFixed(2)}¢` : "—";
+    let depthLine = "";
+    if(walk && walk.avg !== null){
+      const slip = (walk.avg - (ba || walk.avg));
+      const cls = walk.exhausted ? "bad" : (slip > 0.005 ? "bad" : "ok");
+      const slipTxt = Number.isFinite(slip) ? `滑点 +${(slip*100).toFixed(2)}¢` : "";
+      const exhaust = walk.exhausted ? "（深度不足）" : "";
+      depthLine = `<div class="depthline ${cls}">吃 ${walk.levelsHit} 档 · 均 ${(walk.avg*100).toFixed(2)}¢ · ${slipTxt}${exhaust}</div>`;
+    }
     return `
       <div class="bookcard">
         <h4><span>${escapeHtml(title)}</span><span class="muted-text">¢ / 份</span></h4>
         <div class="rows"><div class="lbl">ask</div><div class="lbl">size</div>${askRows}</div>
+        ${depthLine}
         <div class="spread">${spread}</div>
         <div class="rows"><div class="lbl">bid</div><div class="lbl">size</div>${bidRows}</div>
       </div>
@@ -1456,7 +1597,14 @@ Polymarket Maker：fee/share = 0
       const prev = _currentEvent;
       const chosenA = (isRefresh && prev && prev.chosenA < pickList.length) ? prev.chosenA : 0;
       const chosenB = (isRefresh && prev && prev.chosenB < pickList.length && prev.chosenB !== chosenA) ? prev.chosenB : 1;
-      _currentEvent = { slug: parsed.slug, title: ev.title || parsed.slug, kind, markets: pickList, chosenA, chosenB };
+      _currentEvent = {
+        slug: parsed.slug,
+        title: ev.title || parsed.slug,
+        kind, markets: pickList, chosenA, chosenB,
+        endDate: ev.endDate || ev.endDateIso || null,
+        endDateIso: ev.endDateIso || ev.endDate || null,
+        resolutionSource: ev.resolutionSource || "",
+      };
 
       if(kind === "multi" && pickList.length > 2 && picker){
         renderMarketPicker();
@@ -1551,16 +1699,23 @@ Polymarket Maker：fee/share = 0
     if(mySeq !== _fetchSeq) return;
     const bookA = resA.book, bookB = resB.book;
     const clobVia = resB.via || resA.via;
-    const askA = bestAskOf(bookA);
-    const askB = bestAskOf(bookB);
+    _currentEvent.bookA = bookA;
+    _currentEvent.bookB = bookB;
+    _currentEvent.lastFetch = Date.now();
+
+    const target = currentSizeTarget();
+    const walkA = walkBook(sortedAsks(bookA), target);
+    const walkB = walkBook(sortedAsks(bookB), target);
+    const pA = walkA.avg !== null ? walkA.avg : bestAskOf(bookA);
+    const pB = walkB.avg !== null ? walkB.avg : bestAskOf(bookB);
 
     $("nameA").value = mA.name;
     $("platformA").value = "poly";
-    if(askA !== null) $("priceA").value = (askA*100).toFixed(2);
+    if(pA !== null) $("priceA").value = (pA*100).toFixed(2);
 
     $("nameB").value = mB.name;
     $("platformB").value = "poly";
-    if(askB !== null) $("priceB").value = (askB*100).toFixed(2);
+    if(pB !== null) $("priceB").value = (pB*100).toFixed(2);
 
     ["A","B"].forEach(syncVisibility);
     collapseHeroOnce();
@@ -1568,22 +1723,27 @@ Polymarket Maker：fee/share = 0
     persistState();
 
     status.className = "urlbox-status ok";
-    const askAs = askA !== null ? `${(askA*100).toFixed(2)}¢` : "—";
-    const askBs = askB !== null ? `${(askB*100).toFixed(2)}¢` : "—";
+    const pAs = pA !== null ? `${(pA*100).toFixed(2)}¢` : "—";
+    const pBs = pB !== null ? `${(pB*100).toFixed(2)}¢` : "—";
     const ts = new Date().toLocaleTimeString([], {hour12:false});
     const multiTip = _currentEvent.kind === "multi" && _currentEvent.markets.length > 2
       ? `（${_currentEvent.markets.length} 个 outcome，可在下方切换）`
       : "";
     const viaLabel = clobVia === "vercel" ? "（经 Vercel API 转发）" : "";
-    status.textContent = `${ts} · A ${askAs}，B ${askBs}${multiTip}${viaLabel}。点刷新重取盘口。`;
+    const sizeTip = sizeLabel(target);
+    status.textContent = `${ts} · A ${pAs}，B ${pBs}（VWAP @ ${sizeTip}）${multiTip}${viaLabel}。`;
 
     books.hidden = false;
-    books.innerHTML = renderBookCard(mA.name, bookA) + renderBookCard(mB.name, bookB);
+    books.innerHTML = renderBookCard(mA.name, bookA, target) + renderBookCard(mB.name, bookB, target);
+    refreshPairingStrip();
+    startAutoRefreshIfEnabled();
   }
 
   function calculate(){
     ["A","B"].forEach(syncVisibility);
+    syncSizeModeVisibility();
 
+    const mode = $("sizeMode") ? $("sizeMode").value : "bankroll";
     const bankroll = readNum("bankroll");
     const pA = readNum("priceA")/100;
     const pB = readNum("priceB")/100;
@@ -1591,9 +1751,15 @@ Polymarket Maker：fee/share = 0
     const fpsB = feePerShare("B");
 
     let unitCost = pA + fpsA + pB + fpsB;
-    const rawShares = unitCost > 0 ? bankroll / unitCost : 0;
     const floored = $("roundShares").value === "floor";
-    let shares = floored ? Math.floor(rawShares) : rawShares;
+    let shares;
+    if(mode === "shares"){
+      const t = readNum("targetShares");
+      shares = floored ? Math.floor(t) : t;
+    } else {
+      const rawShares = unitCost > 0 ? bankroll / unitCost : 0;
+      shares = floored ? Math.floor(rawShares) : rawShares;
+    }
 
     const a = legData("A", shares);
     const b = legData("B", shares);
@@ -1602,7 +1768,7 @@ Polymarket Maker：fee/share = 0
     const payout = shares;
     const profit = payout - totalSpend;
     const roi = totalSpend > 0 ? profit / totalSpend : 0;
-    const leftover = floored ? Math.max(0, bankroll - totalSpend) : 0;
+    const leftover = (mode === "bankroll" && floored) ? Math.max(0, bankroll - totalSpend) : 0;
 
     const priceSum = pA + pB;
     const noFeeQ = priceSum > 0 ? bankroll / priceSum : 0;
@@ -1810,6 +1976,197 @@ Polymarket Maker：fee/share = 0
 
     _lastResult = {a, b, shares};
     renderPartialFill();
+    renderArbBanner({unitCost, roi, profit, shares, status});
+  }
+
+  function syncSizeModeVisibility(){
+    const mode = $("sizeMode") ? $("sizeMode").value : "bankroll";
+    document.querySelectorAll(".size-bankroll").forEach(el => el.classList.toggle("hide", mode !== "bankroll"));
+    document.querySelectorAll(".size-shares").forEach(el => el.classList.toggle("hide", mode !== "shares"));
+  }
+
+  function renderArbBanner({unitCost, roi, profit, shares, status}){
+    const banner = $("arbBanner");
+    if(!banner) return;
+    const anyLoaded = !!(_currentEvent || _currentPredict);
+    banner.classList.toggle("hide", !anyLoaded);
+    if(!anyLoaded) return;
+    const unit = Number.isFinite(unitCost) ? money(unitCost, 4) : "—";
+    const roiTxt = Number.isFinite(roi) ? `${roi >= 0 ? "+" : "−"}${pct(Math.abs(roi), 2)}` : "—";
+    const unitEl = $("arbUnit");
+    const roiEl = $("arbRoi");
+    unitEl.textContent = unit;
+    unitEl.className = "arb-val " + (status === "good" ? "good" : status === "bad" ? "bad" : "warn");
+    roiEl.textContent = roiTxt + (Number.isFinite(profit) ? ` · ${profit >= 0 ? "+" : "−"}${money(Math.abs(profit),2)} × ${num(shares,0)}份` : "");
+    roiEl.className = "arb-val " + (status === "good" ? "good" : status === "bad" ? "bad" : "warn");
+    const now = new Date();
+    const fetches = [
+      _currentEvent && _currentEvent.lastFetch ? _currentEvent.lastFetch : 0,
+      _currentPredict && _currentPredict.lastFetch ? _currentPredict.lastFetch : 0,
+    ].filter(Boolean);
+    const lastFetch = fetches.length ? Math.max(...fetches) : now.getTime();
+    const age = Math.round((now.getTime() - lastFetch) / 1000);
+    const ts = new Date(lastFetch).toLocaleTimeString([], {hour12:false});
+    $("arbTs").textContent = `最近抓盘 ${ts}（${age}s 前）`;
+    renderArbLive();
+  }
+
+  function renderArbLive(){
+    const wrap = $("arbLiveWrap");
+    const el = $("arbLive");
+    if(!wrap || !el) return;
+    if(!_currentEvent || !_currentEvent.bookA || !_currentEvent.bookB){
+      wrap.hidden = true;
+      return;
+    }
+    const target = currentSizeTarget();
+    const wA = walkBook(sortedAsks(_currentEvent.bookA), target);
+    const wB = walkBook(sortedAsks(_currentEvent.bookB), target);
+    if(wA.avg == null || wB.avg == null){ wrap.hidden = true; return; }
+    const fpsA = feePerShareAt("A", wA.avg);
+    const fpsB = feePerShareAt("B", wB.avg);
+    const unit = wA.avg + fpsA + wB.avg + fpsB;
+    const liveRoi = unit > 0 ? (1 - unit) / unit : 0;
+    wrap.hidden = false;
+    el.textContent = `${money(unit,4)} · ${liveRoi >= 0 ? "+" : "−"}${pct(Math.abs(liveRoi), 2)}`;
+    el.className = "arb-val " + (unit < 0.9995 ? "good" : unit > 1.0005 ? "bad" : "warn");
+  }
+
+  function refreshPairingStrip(){
+    const strip = $("pairStrip");
+    if(!strip) return;
+    const hasPoly = !!_currentEvent;
+    const hasPredict = !!_currentPredict;
+    if(!hasPoly && !hasPredict){ strip.classList.add("hide"); return; }
+    strip.classList.remove("hide");
+    const ev = _currentEvent;
+    if(ev){
+      const mA = ev.markets[ev.chosenA];
+      $("pairPolyTitle").textContent = ev.title || "—";
+      const endDate = ev.endDateIso || ev.endDate || "";
+      const res = ev.resolutionSource || "";
+      const parts = [];
+      if(mA) parts.push(`A: ${mA.name}`);
+      if(endDate) parts.push(`结算 ${new Date(endDate).toLocaleDateString()}`);
+      if(res) parts.push(`源 ${res}`);
+      $("pairPolyMeta").innerHTML = escapeHtml(parts.join(" · ")) || "—";
+    } else {
+      $("pairPolyTitle").textContent = "未加载";
+      $("pairPolyMeta").textContent = "—";
+    }
+    const pd = _currentPredict;
+    if(pd){
+      $("pairPredictTitle").textContent = pd.title || "—";
+      const m = pd.market || {};
+      const res = m.resolution || {};
+      const parts = [];
+      const resDate = res.endDate || res.resolvedAt || res.date || m.endDate || m.createdAt;
+      if(resDate) parts.push(`结算 ${new Date(resDate).toLocaleDateString()}`);
+      if(res.name) parts.push(`源 ${res.name}`);
+      else if(m.categorySlug) parts.push(`类 ${m.categorySlug}`);
+      $("pairPredictMeta").innerHTML = escapeHtml(parts.join(" · ")) || "—";
+    } else {
+      $("pairPredictTitle").textContent = "未加载";
+      $("pairPredictMeta").textContent = "—";
+    }
+    if(hasPoly && hasPredict){
+      const polyDate = ev.endDateIso || ev.endDate;
+      const pdDate = (pd.market && pd.market.resolution && (pd.market.resolution.endDate || pd.market.resolution.date)) || (pd.market && (pd.market.endDate || pd.market.createdAt));
+      if(polyDate && pdDate){
+        const diffDays = Math.abs(new Date(polyDate).getTime() - new Date(pdDate).getTime()) / 86400000;
+        if(diffDays > 1.5){
+          $("pairPolyMeta").innerHTML += ` <span class="warn-pill">日期差 ${diffDays.toFixed(1)}d</span>`;
+        }
+      }
+    }
+  }
+
+  let _autoRefreshTimer = null;
+  function startAutoRefreshIfEnabled(){
+    const cb = $("autoRefresh");
+    if(!cb || !cb.checked) return;
+    if(_autoRefreshTimer) return;
+    _autoRefreshTimer = setInterval(autoRefreshTick, 5000);
+  }
+  function stopAutoRefresh(){
+    if(_autoRefreshTimer){ clearInterval(_autoRefreshTimer); _autoRefreshTimer = null; }
+  }
+  let _autoRefreshBusy = false;
+  async function autoRefreshTick(){
+    if(document.hidden) return;
+    if(_autoRefreshBusy) return;
+    _autoRefreshBusy = true;
+    try{
+      const tasks = [];
+      if(_currentEvent) tasks.push(refreshPolyBooksSilent());
+      if(_currentPredict) tasks.push(refreshPredictBookSilent());
+      await Promise.all(tasks);
+    }finally{
+      _autoRefreshBusy = false;
+    }
+  }
+
+  async function refreshPolyBooksSilent(){
+    if(!_currentEvent) return;
+    const mA = _currentEvent.markets[_currentEvent.chosenA];
+    const mB = _currentEvent.markets[_currentEvent.chosenB];
+    if(!mA || !mB) return;
+    const seq = ++_fetchSeq;
+    try{
+      const [resA, resB] = await Promise.all([fetchClobBook(mA.token), fetchClobBook(mB.token)]);
+      if(seq !== _fetchSeq || !_currentEvent) return;
+      _currentEvent.bookA = resA.book;
+      _currentEvent.bookB = resB.book;
+      _currentEvent.lastFetch = Date.now();
+      const target = currentSizeTarget();
+      const wA = walkBook(sortedAsks(resA.book), target);
+      const wB = walkBook(sortedAsks(resB.book), target);
+      const pA = wA.avg !== null ? wA.avg : bestAskOf(resA.book);
+      const pB = wB.avg !== null ? wB.avg : bestAskOf(resB.book);
+      if(pA !== null) $("priceA").value = (pA*100).toFixed(2);
+      if(pB !== null) $("priceB").value = (pB*100).toFixed(2);
+      const books = $("urlBooks");
+      books.innerHTML = renderBookCard(mA.name, resA.book, target) + renderBookCard(mB.name, resB.book, target);
+      books.hidden = false;
+      calculate();
+    }catch(_){ /* silent */ }
+  }
+
+  async function refreshPredictBookSilent(){
+    if(!_currentPredict) return;
+    try{
+      const resp = await fetchJsonPredict(`type=book&market_id=${encodeURIComponent(_currentPredict.marketId)}`);
+      if(!_currentPredict) return;
+      _currentPredict.yesBook = normalizePredictBook(resp);
+      _currentPredict.noBook = synthesizeNoBook(_currentPredict.yesBook);
+      _currentPredict.lastFetch = Date.now();
+      const target = currentSizeTarget();
+      const sizeTip = sizeLabel(target);
+      const fillBtns = side => `
+        <div class="predict-fill">
+          <button type="button" class="secondary" data-pf-side="${side}" data-pf-target="A">填入 A · VWAP @ ${sizeTip}</button>
+          <button type="button" class="secondary" data-pf-side="${side}" data-pf-target="B">填入 B · VWAP @ ${sizeTip}</button>
+        </div>`;
+      const books = $("predictBooks");
+      books.innerHTML = `
+        <div class="predict-book-wrap">
+          ${renderBookCard(`${_currentPredict.yesName}（Predict · Yes 侧）`, _currentPredict.yesBook, target)}
+          ${fillBtns("yes")}
+        </div>
+        <div class="predict-book-wrap">
+          ${renderBookCard(`${_currentPredict.noName}（Predict · No 合成 = 1 − Yes）`, _currentPredict.noBook, target)}
+          ${fillBtns("no")}
+        </div>`;
+      books.querySelectorAll("[data-pf-side][data-pf-target]").forEach(b => b.addEventListener("click", onPredictFillClick));
+      ["A","B"].forEach(t => {
+        const side = _currentPredict["fill"+t];
+        if(!side) return;
+        const book = side === "yes" ? _currentPredict.yesBook : _currentPredict.noBook;
+        const walk = walkBook(sortedAsks(book), target);
+        if(walk.avg != null) $("price"+t).value = (walk.avg*100).toFixed(2);
+      });
+      calculate();
+    }catch(_){ /* silent */ }
   }
 
   let _lastResult = null;
@@ -1871,6 +2228,11 @@ Polymarket Maker：fee/share = 0
   function reset(){
     $("bankroll").value = 1000;
     $("roundShares").value = "none";
+    $("sizeMode").value = "bankroll";
+    $("targetShares").value = 200;
+    $("autoRefresh").checked = false;
+    stopAutoRefresh();
+    syncSizeModeVisibility();
 
     $("nameA").value = "Ninjas in Pyjamas";
     $("priceA").value = 13;
@@ -1903,16 +2265,25 @@ Polymarket Maker：fee/share = 0
 
   function readState(){
     const out = {};
-    ids.forEach(id => { out[id] = $(id).value; });
+    ids.forEach(id => {
+      const el = $(id);
+      if(!el) return;
+      out[id] = el.type === "checkbox" ? (el.checked ? "1" : "") : el.value;
+    });
     return out;
   }
 
   function writeState(state){
     if(!state) return;
     ids.forEach(id => {
-      if(state[id] !== undefined && state[id] !== null) $(id).value = state[id];
+      if(state[id] === undefined || state[id] === null) return;
+      const el = $(id);
+      if(!el) return;
+      if(el.type === "checkbox") el.checked = !!state[id];
+      else el.value = state[id];
     });
     ["A","B"].forEach(syncVisibility);
+    syncSizeModeVisibility();
   }
 
   function persistState(){
@@ -2054,6 +2425,16 @@ Polymarket Maker：fee/share = 0
     $("refreshUrlBtn").addEventListener("click", fetchAndFillFromUrl);
     $("marketUrl").addEventListener("keydown", (e) => {
       if(e.key === "Enter"){ e.preventDefault(); fetchAndFillFromUrl(); }
+    });
+
+    $("sizeMode").addEventListener("change", syncSizeModeVisibility);
+    $("autoRefresh").addEventListener("change", () => {
+      if($("autoRefresh").checked) startAutoRefreshIfEnabled();
+      else stopAutoRefresh();
+    });
+    document.addEventListener("visibilitychange", () => {
+      if(document.hidden) stopAutoRefresh();
+      else startAutoRefreshIfEnabled();
     });
 
     $("fetchPredictBtn").addEventListener("click", fetchAndFillFromPredictUrl);
