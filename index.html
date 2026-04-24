@@ -480,6 +480,17 @@
     .pair-cand:hover{border-color:var(--accent);background:rgba(124,58,237,.06);}
     .pair-cand .pc-score{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;min-width:34px;font-size:11.5px;}
     .pair-cand .pc-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .pair-top{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--accent);border-radius:8px;background:rgba(124,58,237,.08);margin-bottom:6px;}
+    .pair-top .pt-info{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
+    .pair-top .pt-info .pc-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;}
+    .pair-top .pc-score{color:var(--accent);font-weight:700;font-variant-numeric:tabular-nums;min-width:34px;font-size:11.5px;}
+    .pair-top .pt-use{padding:6px 12px;border:none;border-radius:6px;background:var(--accent);color:#fff;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;font-family:inherit;}
+    .pair-top .pt-use:hover{filter:brightness(1.1);}
+    .pair-more{margin-top:4px;}
+    .pair-more > summary{cursor:pointer;font-size:11.5px;color:var(--muted);list-style:none;user-select:none;padding:2px 0;}
+    .pair-more > summary::-webkit-details-marker{display:none;}
+    .pair-more > summary::after{content:" ▾";}
+    .pair-more[open] > summary::after{content:" ▴";}
 
     /* Per-leg source header: platform badge + outcome + open-in-new link */
     .leg-src{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:11px;}
@@ -543,6 +554,10 @@
     #verdictAdvice{margin-top:8px;padding:6px 10px;font-size:12px;color:var(--sub);border-left:3px solid var(--accent);background:rgba(124,58,237,.05);border-radius:0 6px 6px 0;}
     #verdictAdvice.hide{display:none;}
     #verdictAdvice b{color:var(--accent);}
+
+    /* Inline input error message */
+    .err-msg{display:block;margin-top:3px;font-size:11px;color:var(--bad);line-height:1.3;}
+    .err-msg[hidden]{display:none;}
     .leg-money .lm-shares{font-size:11.5px;color:var(--muted);padding-left:2px;}
     .leg-money.overbudget{border-color:var(--bad);background:rgba(239,68,68,.06);}
     .leg-money.overbudget .lm-shares{color:var(--bad);}
@@ -1142,7 +1157,10 @@
     flash(el);
   }
 
+  let _silentUpdate = false;
+  let _lastStatusForFlash = null;
   function flash(el){
+    if(_silentUpdate) return;
     el.classList.remove("flash");
     void el.offsetWidth;
     el.classList.add("flash");
@@ -1154,19 +1172,51 @@
     _rafId = requestAnimationFrame(() => { _rafId = 0; calculate(); });
   }
 
+  const INPUT_ERR_LABELS = {
+    bankroll: "本金必须大于 0",
+    priceA: "价格必须在 0–100¢",
+    priceB: "价格必须在 0–100¢",
+    predictBase: "Taker 费率 0–100%",
+    predictDiscount: "折扣 0–100%",
+    polyRateA: "费率系数 0–1",
+    polyRateB: "费率系数 0–1",
+    customFeeA: "自定义费率 0–100%",
+    customFeeB: "自定义费率 0–100%",
+    customFeePerShareA: "不能为负",
+    customFeePerShareB: "不能为负",
+  };
+
+  function setInputError(id, isInvalid){
+    const el = $(id);
+    if(!el) return;
+    el.setAttribute("aria-invalid", isInvalid ? "true" : "false");
+    // Find or create an adjacent .err-msg sibling.
+    let err = el.parentElement && el.parentElement.querySelector(`.err-msg[data-for="${id}"]`);
+    if(isInvalid && !err && el.parentElement){
+      err = document.createElement("small");
+      err.className = "err-msg";
+      err.setAttribute("data-for", id);
+      err.textContent = INPUT_ERR_LABELS[id] || "取值超出允许范围";
+      el.parentElement.appendChild(err);
+    } else if(err){
+      err.hidden = !isInvalid;
+      if(isInvalid) err.textContent = INPUT_ERR_LABELS[id] || "取值超出允许范围";
+    }
+  }
+
   function readNum(id){
     const el = $(id);
     if(!el) return 0;
     const raw = parseFloat(el.value);
     const c = NUMERIC_CONSTRAINTS[id];
     if(!Number.isFinite(raw)){
-      el.setAttribute("aria-invalid","true");
+      setInputError(id, el.value !== "" && el.value != null);
       return 0;
     }
     const min = c?.min ?? -Infinity;
     const max = c?.max ?? Infinity;
     const invalid = raw < min || raw > max;
-    el.setAttribute("aria-invalid", invalid ? "true" : "false");
+    setInputError(id, invalid);
     return clamp(raw, min, max);
   }
 
@@ -1221,27 +1271,42 @@
     $("polyRate"+side).value = $("polyCat"+side).value;
   }
 
-  function feePerShareAt(side, priceFraction, overrideOrder=null){
-    const p = Math.min(0.999999, Math.max(0, priceFraction));
-    const platform = $("platform"+side).value;
-    const order = overrideOrder || $("order"+side).value;
-
+  // Pure fee-per-share calculator. Takes all inputs as arguments; no DOM reads.
+  // Makes fees deterministic for tests and lets us compute hypothetical platforms
+  // (e.g. "手续费预估") without temporarily mutating the platform select.
+  function feePerShareComputed({platform, order, price, predictBase, predictDiscount, polyRate, customFeePct, customFeePerShare}){
+    const p = Math.min(0.999999, Math.max(0, price));
     if(p <= 0) return 0;
     if(order === "maker") return 0;
-
     if(platform === "predict"){
-      const base = readNum("predictBase") / 100;
-      const discount = readNum("predictDiscount") / 100;
-      return base * (1 - discount) * Math.min(p, 1-p);
+      const base = (predictBase || 0) / 100;
+      const discount = (predictDiscount || 0) / 100;
+      return base * (1 - discount) * Math.min(p, 1 - p);
     }
-
     if(platform === "poly"){
-      return readNum("polyRate"+side) * p * (1-p);
+      return (polyRate || 0) * p * (1 - p);
     }
-
-    const percent = readNum("customFee"+side) / 100;
-    const fixed = readNum("customFeePerShare"+side);
+    const percent = (customFeePct || 0) / 100;
+    const fixed = customFeePerShare || 0;
     return percent * p + fixed;
+  }
+
+  // Read the current DOM state for one side into the pure function's args.
+  function sideFeeParams(side, overrides = {}){
+    return {
+      platform: $("platform"+side).value,
+      order: overrides.order || $("order"+side).value,
+      price: overrides.price != null ? overrides.price : readNum("price"+side)/100,
+      predictBase: readNum("predictBase"),
+      predictDiscount: readNum("predictDiscount"),
+      polyRate: readNum("polyRate"+side),
+      customFeePct: readNum("customFee"+side),
+      customFeePerShare: readNum("customFeePerShare"+side),
+    };
+  }
+
+  function feePerShareAt(side, priceFraction, overrideOrder=null){
+    return feePerShareComputed(sideFeeParams(side, {price: priceFraction, order: overrideOrder}));
   }
 
   function feePerShare(side, overrideOrder=null){
@@ -1681,14 +1746,19 @@ Polymarket Maker：fee/share = 0
     const walkY = walkBook(sortedAsks(yesBook), target);
     const walkN = walkBook(sortedAsks(noBook), target);
     const pY = walkY.avg, pN = walkN.avg;
-    // Use the platform's own fee formula via a synthetic "side" context.
-    // Temporarily read platform fees by calling feePerShareAt with a side that
-    // is configured to this platform — we synthesize by looking up base params.
-    const prevPlatA = $("platformA").value;
-    $("platformA").value = platform;
-    const feeY = pY !== null ? feePerShareAt("A", pY) : null;
-    const feeN = pN !== null ? feePerShareAt("A", pN) : null;
-    $("platformA").value = prevPlatA;
+    // Pure fee computation — no DOM mutation. Use A-side's polyRate/custom
+    // settings as a sensible proxy but force the platform field.
+    const feeParamsBase = {
+      platform,
+      order: "taker",
+      predictBase: readNum("predictBase"),
+      predictDiscount: readNum("predictDiscount"),
+      polyRate: readNum("polyRateA") || 0.03,
+      customFeePct: readNum("customFeeA"),
+      customFeePerShare: readNum("customFeePerShareA"),
+    };
+    const feeY = pY !== null ? feePerShareComputed({...feeParamsBase, price: pY}) : null;
+    const feeN = pN !== null ? feePerShareComputed({...feeParamsBase, price: pN}) : null;
     const sharesY = pY !== null && target.notional > 0 ? (target.notional / pY) : 0;
     const sharesN = pN !== null && target.notional > 0 ? (target.notional / pN) : 0;
     const totalFeeY = feeY !== null ? feeY * sharesY : null;
@@ -1965,15 +2035,7 @@ Polymarket Maker：fee/share = 0
     container.innerHTML = `<div class="pair-cand-head">正在搜 Polymarket 对家 …</div>`;
     container.classList.remove("hide");
     const cands = await searchPolyEventsByText(query);
-    // Auto-lock when there's a confident single winner and no Poly event loaded yet.
-    if(!_currentEvent && cands.length && cands[0].score >= 0.75 && (cands.length === 1 || cands[0].score - (cands[1]?.score || 0) >= 0.15)){
-      container.innerHTML = `<div class="pair-cand-head">已自动锁定 Polymarket 对家：<b>${escapeHtml(cands[0].title)}</b>（${Math.round(cands[0].score*100)}%）</div>`;
-      $("marketUrl").value = `https://polymarket.com/event/${cands[0].slug}`;
-      toast(`自动锁定 Polymarket 对家（${Math.round(cands[0].score*100)}%）`, "info");
-      fetchAndFillFromUrl();
-      return;
-    }
-    renderPairCandidates("predictPairCandidates", cands, "Polymarket", (pick) => {
+    renderPairCandidatesConfirm("predictPairCandidates", cands, "Polymarket", (pick) => {
       $("marketUrl").value = `https://polymarket.com/event/${pick.slug}`;
       fetchAndFillFromUrl();
     });
@@ -1985,19 +2047,7 @@ Polymarket Maker：fee/share = 0
     container.innerHTML = `<div class="pair-cand-head">正在搜 Predict.fun 对家 …</div>`;
     container.classList.remove("hide");
     const cands = await searchPredictMarketsByText(query);
-    if(!_currentPredict && cands.length && cands[0].score >= 0.75 && (cands.length === 1 || cands[0].score - (cands[1]?.score || 0) >= 0.15)){
-      const pick = cands[0];
-      container.innerHTML = `<div class="pair-cand-head">已自动锁定 Predict.fun 对家：<b>${escapeHtml(pick.title)}</b>（${Math.round(pick.score*100)}%）</div>`;
-      toast(`自动锁定 Predict.fun 对家（${Math.round(pick.score*100)}%）`, "info");
-      if(pick.slug){
-        $("predictUrl").value = `https://predict.fun/market/${pick.slug}`;
-        fetchAndFillFromPredictUrl();
-      }else{
-        loadPredictById(pick.id, pick.title);
-      }
-      return;
-    }
-    renderPairCandidates("polyPairCandidates", cands, "Predict.fun", (pick) => {
+    renderPairCandidatesConfirm("polyPairCandidates", cands, "Predict.fun", (pick) => {
       const url = pick.slug ? `https://predict.fun/market/${pick.slug}` : "";
       if(url){
         $("predictUrl").value = url;
@@ -2005,6 +2055,51 @@ Polymarket Maker：fee/share = 0
       }else{
         loadPredictById(pick.id, pick.title);
       }
+    });
+  }
+
+  // Confirmation-style candidate list: top hit is a primary "使用此对家" button,
+  // the rest are tucked behind a "换一个" toggle. Nothing auto-locks — the user
+  // always decides. Settlement conditions might not match even at 98% title
+  // similarity, so asking for a tap is the safer default.
+  function renderPairCandidatesConfirm(containerId, candidates, source, onPick){
+    const el = $(containerId);
+    if(!el) return;
+    if(!candidates.length){
+      el.innerHTML = `<div class="pair-cand-head">在 ${source} 没找到疑似对家。</div>`;
+      el.classList.remove("hide");
+      return;
+    }
+    el.classList.remove("hide");
+    const top = candidates[0];
+    const rest = candidates.slice(1);
+    const restHtml = rest.length ? `
+      <details class="pair-more">
+        <summary>换一个（还有 ${rest.length} 个候选）</summary>
+        <div class="pair-cand-list">
+          ${rest.map((c,i) => `
+            <button type="button" class="pair-cand" data-pick="${i+1}" title="${escapeHtml(c.title)}">
+              <span class="pc-score">${Math.round(c.score*100)}%</span>
+              <span class="pc-title">${escapeHtml(c.title)}</span>
+            </button>
+          `).join("")}
+        </div>
+      </details>` : "";
+    el.innerHTML = `
+      <div class="pair-cand-head">${source} 疑似对家（结算条件请自行核对）：</div>
+      <div class="pair-top">
+        <div class="pt-info">
+          <span class="pc-score">${Math.round(top.score*100)}%</span>
+          <span class="pc-title">${escapeHtml(top.title)}</span>
+        </div>
+        <button type="button" class="pt-use" data-pick="0">使用此对家</button>
+      </div>
+      ${restHtml}`;
+    el.querySelectorAll("[data-pick]").forEach(b => {
+      b.addEventListener("click", () => {
+        const idx = parseInt(b.getAttribute("data-pick"), 10);
+        onPick(candidates[idx]);
+      });
     });
   }
 
@@ -2049,7 +2144,7 @@ Polymarket Maker：fee/share = 0
     btn.textContent = isRefresh ? "刷新中…" : "抓取中…";
     if(refreshBtn){ refreshBtn.disabled = true; refreshBtn.classList.add("spinning"); }
     status.className = "urlbox-status loading";
-    status.textContent = isRefresh ? `刷新 Predict ${parsed.slug} 盘口 …` : `查询 Predict 市场 ${parsed.slug} …`;
+    status.textContent = isRefresh ? `刷新 Predict ${parsed.slug} 盘口 …` : `① 查询 Predict 市场 ${parsed.slug} …`;
     if(!isRefresh){
       books.hidden = true;
       books.innerHTML = "";
@@ -2060,6 +2155,9 @@ Polymarket Maker：fee/share = 0
       const resolved = await resolvePredictMarkets(parsed.slug);
       if(mySeq !== _predictFetchSeq) return;
       if(!resolved.markets.length) throw new Error("该 Predict 页面没有可用子市场");
+      if(!isRefresh){
+        status.textContent = `② 读取 Predict 订单簿 …`;
+      }
       const prevChosen = (isRefresh && _currentPredict && _currentPredict.chosen < resolved.markets.length) ? _currentPredict.chosen : 0;
       _currentPredict = {
         slug: parsed.slug,
@@ -2296,7 +2394,7 @@ Polymarket Maker：fee/share = 0
     btn.textContent = isRefresh ? "刷新中…" : "抓取中…";
     if(refreshBtn){ refreshBtn.disabled = true; refreshBtn.classList.add("spinning"); }
     status.className = "urlbox-status loading";
-    status.textContent = isRefresh ? `刷新 ${parsed.slug} 盘口 …` : `查询事件 ${parsed.slug} …`;
+    status.textContent = isRefresh ? `刷新 ${parsed.slug} 盘口 …` : `① 查询事件 ${parsed.slug} …`;
     if(!isRefresh){
       books.hidden = true;
       books.innerHTML = "";
@@ -2305,6 +2403,9 @@ Polymarket Maker：fee/share = 0
 
     try{
       const { event: ev, via: gammaVia } = await fetchGammaEvent(parsed.slug);
+      if(mySeq === _fetchSeq && !isRefresh){
+        status.textContent = `② 读取 Yes/No 订单簿 …`;
+      }
       if(mySeq !== _fetchSeq) return;
       const markets = (ev.markets || []).filter(m => m && !m.closed && m.active !== false);
       if(!markets.length) throw new Error("事件下没有活跃市场");
@@ -2928,6 +3029,7 @@ Polymarket Maker：fee/share = 0
     if(document.hidden) return;
     if(_autoRefreshBusy) return;
     _autoRefreshBusy = true;
+    _silentUpdate = true;
     try{
       const tasks = [];
       if(_currentEvent) tasks.push(refreshPolyBooksSilent());
@@ -2935,6 +3037,7 @@ Polymarket Maker：fee/share = 0
       await Promise.all(tasks);
     }finally{
       _autoRefreshBusy = false;
+      _silentUpdate = false;
     }
   }
 
