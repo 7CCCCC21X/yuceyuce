@@ -1047,40 +1047,44 @@ Polymarket Maker：fee/share = 0
     }catch(_){ return null; }
   }
 
-  const POLY_PROXIES = [
-    { label: "direct",     wrap: (u) => u },
-    { label: "corsproxy",  wrap: (u) => `https://corsproxy.io/?${encodeURIComponent(u)}` },
-    { label: "allorigins", wrap: (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` }
-  ];
-  let _polyIdx = 0;
+  const POLYMARKET_API_BASE = "/api/polymarket";
+  const POLY_TIMEOUT_MS = 12000;
 
-  async function fetchJsonPoly(url, opts){
-    const errors = [];
-    for(let k = 0; k < POLY_PROXIES.length; k++){
-      const idx = (_polyIdx + k) % POLY_PROXIES.length;
-      const target = POLY_PROXIES[idx].wrap(url);
-      try{
-        const r = await fetch(target, opts);
-        if(!r.ok){ errors.push(`${POLY_PROXIES[idx].label} HTTP ${r.status}`); continue; }
-        const data = await r.json();
-        _polyIdx = idx;
-        return { data, via: POLY_PROXIES[idx].label };
-      }catch(e){
-        const msg = e && e.message ? e.message : String(e);
-        errors.push(`${POLY_PROXIES[idx].label}: ${msg}`);
-      }
+  try{ localStorage.removeItem("yuce-poly-pref"); }catch(_){}
+
+  async function fetchJsonPoly(query){
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), POLY_TIMEOUT_MS);
+    let r;
+    try{
+      r = await fetch(`${POLYMARKET_API_BASE}?${query}`, {cache:"no-store", signal: ctl.signal});
+    }catch(e){
+      clearTimeout(timer);
+      const msg = e && e.name === "AbortError" ? `Vercel API 超时 ${POLY_TIMEOUT_MS/1000}s` : (e && e.message ? e.message : String(e));
+      throw new Error(msg);
     }
-    throw new Error(`所有抓取路径都失败 — ${errors.join(" | ")}`);
+    clearTimeout(timer);
+    const text = await r.text();
+    if(!r.ok){
+      let message = text;
+      try{ const p = JSON.parse(text); message = p.error || p.message || text; }catch(_){}
+      throw new Error(`Vercel API HTTP ${r.status}: ${message}`);
+    }
+    try{
+      return { data: JSON.parse(text), via: "vercel" };
+    }catch(_){
+      throw new Error("Vercel API 返回的不是 JSON");
+    }
   }
 
   async function fetchGammaEvent(slug){
-    const { data: arr, via } = await fetchJsonPoly(`https://gamma-api.polymarket.com/events?slug=${encodeURIComponent(slug)}`, {cache:"no-store"});
+    const { data: arr, via } = await fetchJsonPoly(`type=event&slug=${encodeURIComponent(slug)}`);
     if(!Array.isArray(arr) || !arr.length) throw new Error("未找到该事件，检查 URL 是否正确");
     return { event: arr[0], via };
   }
 
   async function fetchClobBook(tokenId){
-    const { data, via } = await fetchJsonPoly(`https://clob.polymarket.com/book?token_id=${encodeURIComponent(tokenId)}`, {cache:"no-store"});
+    const { data, via } = await fetchJsonPoly(`type=book&token_id=${encodeURIComponent(tokenId)}`);
     return { book: data, via };
   }
 
@@ -1206,10 +1210,9 @@ Polymarket Maker：fee/share = 0
       if(mySeq !== _fetchSeq) return;
       status.className = "urlbox-status bad";
       const msg = err && err.message ? err.message : String(err);
-      const allFailed = /所有抓取路径都失败/.test(msg);
-      const hint = allFailed
-        ? "。直连、corsproxy.io、allorigins.win 都不通——检查本机网络 / VPN / 浏览器隐私插件，或过几分钟代理恢复再试。"
-        : (/Failed to fetch|NetworkError/i.test(msg) ? "（可能是网络或浏览器插件拦截）" : "");
+      const hint = /Failed to fetch|NetworkError/i.test(msg)
+        ? "（本机无法到达 Vercel API，检查网络或部署状态）"
+        : "";
       status.textContent = `抓取失败：${msg}${hint}`;
       books.hidden = true;
     }finally{
@@ -1312,9 +1315,7 @@ Polymarket Maker：fee/share = 0
     const multiTip = _currentEvent.kind === "multi" && _currentEvent.markets.length > 2
       ? `（${_currentEvent.markets.length} 个 outcome，可在下方切换）`
       : "";
-    const viaLabel = clobVia && clobVia !== "direct"
-      ? `（通过 ${clobVia === "corsproxy" ? "corsproxy.io" : "allorigins.win"} 公共代理转发）`
-      : "";
+    const viaLabel = clobVia === "vercel" ? "（经 Vercel API 转发）" : "";
     status.textContent = `${ts} · A ${askAs}，B ${askBs}${multiTip}${viaLabel}。点刷新重取盘口。`;
 
     books.hidden = false;
